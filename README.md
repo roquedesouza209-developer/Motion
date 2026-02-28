@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Motion
 
-## Getting Started
+Motion is a social media web app for photos, short reels, stories, and direct messaging.
 
-First, run the development server:
+## Run Locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Backend and Persistence
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Motion now includes a local backend built with Next.js Route Handlers.
 
-## Learn More
+- Auth + sessions
+- Posts + likes
+- Personalized discovery ranking
+- Stories + seen state
+- Direct messages + unread counters
 
-To learn more about Next.js, take a look at the following resources:
+All data is persisted to:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `data/motion-db.json`
+- Uploaded files: `public/uploads/*`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The database file is auto-seeded on first run.
 
-## Deploy on Vercel
+Demo credentials:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Email: `demo@motion.app`
+- Password: `demo12345`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## API Routes
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `GET /api/posts?scope=following|discover`
+- `POST /api/posts`
+- `POST /api/posts/[postId]/like`
+- `POST /api/media/upload` (multipart upload field: `file`)
+- `GET /api/stories`
+- `POST /api/stories`
+- `POST /api/stories/[storyId]/seen`
+- `GET /api/messages/conversations`
+- `GET /api/messages/[conversationId]`
+- `POST /api/messages/[conversationId]`
+
+Discovery ranking signals:
+
+- Creator affinity (follows, past likes, direct message contacts)
+- Recency decay
+- Engagement (likes + comments)
+- Media preference (photo vs reel based on prior likes)
+- Exploration/noise for tie-breaking and cold-start diversity

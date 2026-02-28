@@ -1,0 +1,382 @@
+{
+  "users": [
+    {
+      "id": "usr_demo",
+      "name": "Morgan Otto",
+      "handle": "morgan.motion",
+      "role": "Creator",
+      "email": "demo@motion.app",
+      "passwordHash": "9f9b99478ede34b438ef3769d22ccce7cb94c6f21bd3832c83cbfea6284db211728429efc4fc1c4f3e5a4fcbb5fd1e3ce1d45ac1a8ca3760c4841a2f5ebc0b5a",
+      "passwordSalt": "179fdfdab8113da3fa09d1ffdce98997",
+      "avatarGradient": "linear-gradient(135deg, #ff8f6b, #ff5f6d)",
+      "createdAt": "2026-02-27T16:18:58.819Z"
+    },
+    {
+      "id": "usr_lena",
+      "name": "Lena Hart",
+      "handle": "lensbylena",
+      "role": "Photographer",
+      "email": "lena@motion.app",
+      "passwordHash": "5bd0efe54c24ba7086eea9a699cf96900b1d68b6d8213d4197832a9cd2d440df28cad2b39a402452d4c527778709e1133f4df3a1a585b9fe27f3b57d5872b4bc",
+      "passwordSalt": "84ed8cca18604b757d451350a615418a",
+      "avatarGradient": "linear-gradient(135deg, #f6d365, #fda085)",
+      "createdAt": "2026-02-27T16:18:58.848Z"
+    },
+    {
+      "id": "usr_ty",
+      "name": "Ty Rivers",
+      "handle": "tyinmotion",
+      "role": "Creator",
+      "email": "ty@motion.app",
+      "passwordHash": "da1c1ab022d890672c7340e9d56c5eb36f7ff6541336ef9d6f13c38baa3e3e3824c43aa9727c1d377974f251d86e9cbc3d58f46bf807d7feb549fc9ebc2f1939",
+      "passwordSalt": "3cf32047c2f57eff0f88f3070772cfe1",
+      "avatarGradient": "linear-gradient(135deg, #96fbc4, #f9f586)",
+      "createdAt": "2026-02-27T16:18:58.877Z"
+    },
+    {
+      "id": "usr_ari",
+      "name": "Ari Rowan",
+      "handle": "ari.rowan",
+      "role": "Traveler",
+      "email": "ari@motion.app",
+      "passwordHash": "48703f58e8ef075b63db2f8e5030918e7ffc571514fe07c227a53c1b3d80393de68694dc6747eb7870cbf43d77f8cfbc664103cc3a7f0eeecc3ea865d6ff9189",
+      "passwordSalt": "d9ba56e840a3dee8ad9fcc2879bfe307",
+      "avatarGradient": "linear-gradient(135deg, #ffc048, #ff6b6b)",
+      "createdAt": "2026-02-27T16:18:58.906Z"
+    },
+    {
+      "id": "usr_mina",
+      "name": "Mina Roe",
+      "handle": "mina.roe",
+      "role": "Designer",
+      "email": "mina@motion.app",
+      "passwordHash": "02506402bbd83540e6826ea9ebad2cd86e9401bb17b698f34f3074f462fdcb7e6947d70c891c7a71562bb876a3f7eb8164112915bffd6d8a5683a94441c65b35",
+      "passwordSalt": "a4d90d7c3e8224e8629c932b1475d3ca",
+      "avatarGradient": "linear-gradient(135deg, #ff9a9e, #fbc2eb)",
+      "createdAt": "2026-02-27T16:18:58.933Z"
+    },
+    {
+      "id": "usr_noah",
+      "name": "Noah Kim",
+      "handle": "noah.kim",
+      "role": "Filmmaker",
+      "email": "noah@motion.app",
+      "passwordHash": "10410f1444f6026126b1c6bf84dc8829d27787b257cf5b24c2d342c969f5e63202d5a824c2a739b22a701639151c7e3295cdbfbe1cb7dfec67fabc821877816c",
+      "passwordSalt": "66d8cc5b4714507ced8ac63249fe5824",
+      "avatarGradient": "linear-gradient(135deg, #4facfe, #00f2fe)",
+      "createdAt": "2026-02-27T16:18:58.960Z"
+    },
+    {
+      "id": "usr_kiko",
+      "name": "Kiko Vale",
+      "handle": "kiko.studio",
+      "role": "Photographer",
+      "email": "kiko@motion.app",
+      "passwordHash": "8b04aaa6229a0ed486276d6d78e090b40b1cd4c220afff0112bf1eb937684bee716c0141ac67ab8a006840ae877263e1e1041dc32f3cf40e04cee12b96aa268f",
+      "passwordSalt": "486b6591f2f953f9073659914390defc",
+      "avatarGradient": "linear-gradient(135deg, #84fab0, #8fd3f4)",
+      "createdAt": "2026-02-27T16:18:58.987Z"
+    },
+    {
+      "id": "usr_sora",
+      "name": "Sora Miles",
+      "handle": "sora.cut",
+      "role": "Editor",
+      "email": "sora@motion.app",
+      "passwordHash": "4ea3c27a38a71d0a56007e9d9f3a22c556b3ee1602c09e9c5bdfc53171aac57f17c051cd9caeac3034d25c727980bfe777a97281e71ad7cfd2fb0779ff2a1264",
+      "passwordSalt": "a0d217c4f6e49d87932fa4ef0ee41dda",
+      "avatarGradient": "linear-gradient(135deg, #fbc2eb, #a6c1ee)",
+      "createdAt": "2026-02-27T16:18:59.014Z"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "ses_fe6b2baa78f245a4ad3c3cdbe8d9cb2f",
+      "userId": "usr_demo",
+      "createdAt": "2026-02-27T18:18:59.048Z",
+      "expiresAt": "2026-03-29T18:18:59.048Z"
+    },
+    {
+      "id": "ses_cd167727f24a42a4975a8565dd61115f",
+      "userId": "usr_demo",
+      "createdAt": "2026-02-28T08:32:03.652Z",
+      "expiresAt": "2026-03-30T08:32:03.652Z"
+    }
+  ],
+  "posts": [
+    {
+      "id": "pst_101",
+      "userId": "usr_lena",
+      "scope": "following",
+      "kind": "Photo",
+      "caption": "Golden-hour session from downtown rooftops. Shot this in one take with natural light only.",
+      "location": "Seattle, WA",
+      "gradient": "linear-gradient(145deg, #f6d365, #fda085)",
+      "likedBy": [
+        "usr_demo",
+        "usr_ari",
+        "usr_ty"
+      ],
+      "commentCount": 41,
+      "createdAt": "2026-02-27T17:35:59.014Z",
+      "savedBy": []
+    },
+    {
+      "id": "pst_102",
+      "userId": "usr_ty",
+      "scope": "following",
+      "kind": "Reel",
+      "caption": "30-second city run transition edit. Swipe timing was the hardest part.",
+      "location": "Brooklyn, NY",
+      "gradient": "linear-gradient(145deg, #96fbc4, #f9f586)",
+      "likedBy": [
+        "usr_demo",
+        "usr_lena",
+        "usr_mina",
+        "usr_noah"
+      ],
+      "commentCount": 63,
+      "createdAt": "2026-02-27T17:48:59.014Z",
+      "savedBy": []
+    },
+    {
+      "id": "pst_103",
+      "userId": "usr_kiko",
+      "scope": "discover",
+      "kind": "Photo",
+      "caption": "Street portrait series from this weekend. Testing a warmer grade for skin tones.",
+      "location": "Austin, TX",
+      "gradient": "linear-gradient(145deg, #84fab0, #8fd3f4)",
+      "likedBy": [
+        "usr_lena",
+        "usr_ari"
+      ],
+      "commentCount": 29,
+      "createdAt": "2026-02-27T17:59:59.014Z",
+      "savedBy": []
+    },
+    {
+      "id": "pst_104",
+      "userId": "usr_sora",
+      "scope": "discover",
+      "kind": "Reel",
+      "caption": "Quick behind-the-scenes from a music video setup. New lens profile looks clean.",
+      "location": "Los Angeles, CA",
+      "gradient": "linear-gradient(145deg, #fbc2eb, #a6c1ee)",
+      "likedBy": [
+        "usr_demo",
+        "usr_mina",
+        "usr_noah"
+      ],
+      "commentCount": 57,
+      "createdAt": "2026-02-27T18:07:59.014Z",
+      "savedBy": []
+    },
+    {
+      "id": "pst_84b337b0cffb4280877ae9a75bc3076e",
+      "userId": "usr_demo",
+      "scope": "following",
+      "kind": "Photo",
+      "caption": "iuiuioiiiii",
+      "location": "Motion WebApp",
+      "gradient": "linear-gradient(145deg, #f6d365, #fda085)",
+      "likedBy": [],
+      "commentCount": 0,
+      "createdAt": "2026-02-27T18:19:15.423Z",
+      "savedBy": []
+    },
+    {
+      "id": "pst_045f2111a71e4a1abcb464e0294a7a26",
+      "userId": "usr_demo",
+      "scope": "following",
+      "kind": "Photo",
+      "caption": "Yo, welcome home my gee",
+      "location": "Motion",
+      "gradient": "linear-gradient(145deg, #96fbc4, #f9f586)",
+      "mediaUrl": "/uploads/upl_340b6ad26b7d41179b9fb031a328b134.png",
+      "mediaType": "image",
+      "likedBy": [
+        "usr_demo"
+      ],
+      "commentCount": 0,
+      "createdAt": "2026-02-27T18:42:19.197Z",
+      "savedBy": [
+        "usr_demo"
+      ]
+    },
+    {
+      "id": "pst_406a130fd60d4a62999d6a8684ccc55b",
+      "userId": "usr_demo",
+      "scope": "following",
+      "kind": "Reel",
+      "caption": "Sharing good vibes ✌️",
+      "location": "",
+      "gradient": "linear-gradient(145deg, #84fab0, #8fd3f4)",
+      "mediaUrl": "/uploads/upl_eb161f8458b44a26988e365a20a29d45.mp4",
+      "mediaType": "video",
+      "likedBy": [
+        "usr_demo"
+      ],
+      "commentCount": 0,
+      "createdAt": "2026-02-28T08:59:38.369Z",
+      "savedBy": []
+    }
+  ],
+  "stories": [
+    {
+      "id": "sty_62fb91d2a459411e8312e7ed77d6d361",
+      "userId": "usr_demo",
+      "caption": "The guy was crying lik efr",
+      "gradient": "linear-gradient(135deg, #ff8f6b, #ff5f6d)",
+      "createdAt": "2026-02-28T09:39:28.676Z",
+      "expiresAt": "2026-03-01T09:39:28.676Z",
+      "seenBy": [
+        "usr_demo"
+      ]
+    },
+    {
+      "id": "sty_f4516cf882e947018e3d34cc9c0e51bf",
+      "userId": "usr_demo",
+      "caption": "yokljkkkkkkkkkkkkkkkkkkkkkkkkk",
+      "gradient": "linear-gradient(135deg, #00a3a3, #00b1ff)",
+      "createdAt": "2026-02-28T09:39:40.416Z",
+      "expiresAt": "2026-03-01T09:39:40.416Z",
+      "seenBy": [
+        "usr_demo"
+      ]
+    }
+  ],
+  "conversations": [
+    {
+      "id": "con_301",
+      "participantIds": [
+        "usr_demo",
+        "usr_ari"
+      ],
+      "unreadCountByUserId": {
+        "usr_demo": 0,
+        "usr_ari": 1
+      },
+      "updatedAt": "2026-02-28T09:09:44.001Z"
+    },
+    {
+      "id": "con_302",
+      "participantIds": [
+        "usr_demo",
+        "usr_mina"
+      ],
+      "unreadCountByUserId": {
+        "usr_demo": 0,
+        "usr_mina": 0
+      },
+      "updatedAt": "2026-02-27T17:51:59.014Z"
+    },
+    {
+      "id": "con_303",
+      "participantIds": [
+        "usr_demo",
+        "usr_noah"
+      ],
+      "unreadCountByUserId": {
+        "usr_demo": 0,
+        "usr_noah": 1
+      },
+      "updatedAt": "2026-02-27T18:42:41.675Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg_401",
+      "conversationId": "con_301",
+      "senderId": "usr_ari",
+      "text": "Your rooftop reel looked sharp.",
+      "createdAt": "2026-02-27T18:12:59.014Z"
+    },
+    {
+      "id": "msg_402",
+      "conversationId": "con_301",
+      "senderId": "usr_demo",
+      "text": "Thanks, I finally fixed the motion blur.",
+      "createdAt": "2026-02-27T18:14:59.014Z"
+    },
+    {
+      "id": "msg_403",
+      "conversationId": "con_301",
+      "senderId": "usr_ari",
+      "text": "Can you send the LUT from yesterday?",
+      "createdAt": "2026-02-27T18:16:59.014Z"
+    },
+    {
+      "id": "msg_404",
+      "conversationId": "con_302",
+      "senderId": "usr_mina",
+      "text": "Story collab this weekend?",
+      "createdAt": "2026-02-27T17:49:59.014Z"
+    },
+    {
+      "id": "msg_405",
+      "conversationId": "con_302",
+      "senderId": "usr_demo",
+      "text": "Yes, Saturday afternoon works for me.",
+      "createdAt": "2026-02-27T17:51:59.014Z"
+    },
+    {
+      "id": "msg_406",
+      "conversationId": "con_303",
+      "senderId": "usr_demo",
+      "text": "Did you export the b-roll clips?",
+      "createdAt": "2026-02-27T17:15:59.014Z"
+    },
+    {
+      "id": "msg_407",
+      "conversationId": "con_303",
+      "senderId": "usr_noah",
+      "text": "Uploading the raw clips now.",
+      "createdAt": "2026-02-27T17:18:59.014Z"
+    },
+    {
+      "id": "msg_025ecfc5a93446ed80aa98ec93c6ec5f",
+      "conversationId": "con_303",
+      "senderId": "usr_demo",
+      "text": "Ok",
+      "createdAt": "2026-02-27T18:42:41.675Z"
+    },
+    {
+      "id": "msg_f4337262c5e64edba86082336ac38720",
+      "conversationId": "con_301",
+      "senderId": "usr_demo",
+      "text": "Ok, no wrrs ✌️",
+      "createdAt": "2026-02-28T09:09:44.001Z"
+    }
+  ],
+  "follows": [
+    {
+      "followerId": "usr_demo",
+      "followingId": "usr_lena"
+    },
+    {
+      "followerId": "usr_demo",
+      "followingId": "usr_ty"
+    },
+    {
+      "followerId": "usr_demo",
+      "followingId": "usr_ari"
+    },
+    {
+      "followerId": "usr_demo",
+      "followingId": "usr_mina"
+    },
+    {
+      "followerId": "usr_demo",
+      "followingId": "usr_noah"
+    },
+    {
+      "followerId": "usr_lena",
+      "followingId": "usr_ty"
+    },
+    {
+      "followerId": "usr_ty",
+      "followingId": "usr_sora"
+    }
+  ]
+}
