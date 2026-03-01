@@ -81,7 +81,7 @@ type UploadResponse = {
 
 type NotificationEntry = {
   id: string;
-  title: "New follower" | "Liked your post" | "Commented";
+  title: "New follower" | "Sparked your moment" | "Commented";
   detail: string;
   meta: string;
   tone: "follow" | "like" | "comment";
@@ -708,11 +708,11 @@ export default function Home() {
       },
       {
         id: `like-${likeSource?.id ?? "latest"}`,
-        title: "Liked your post",
+        title: "Sparked your moment",
         detail: `${
           likeSource?.author ?? "Mina Roe"
-        } liked your latest post.`,
-        meta: likeSource ? `${likeSource.likes} likes` : "New activity",
+        } sparked your latest moment.`,
+        meta: likeSource ? `${likeSource.likes} sparks` : "New activity",
         tone: "like",
       },
       {
@@ -1342,7 +1342,7 @@ export default function Home() {
                     className="mt-2 flex w-full items-center justify-between rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold text-slate-700"
                     type="button"
                   >
-                    <span>Saved</span>
+                    <span>Vault</span>
                     <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px]">
                       {savedPosts.length}
                     </span>
