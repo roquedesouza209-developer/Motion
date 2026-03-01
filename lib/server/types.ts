@@ -64,6 +64,14 @@ export type MessageRecord = {
   createdAt: string;
 };
 
+export type CommentRecord = {
+  id: string;
+  postId: string;
+  userId: string;
+  text: string;
+  createdAt: string;
+};
+
 export type FollowRecord = {
   followerId: string;
   followingId: string;
@@ -73,6 +81,7 @@ export type MotionDb = {
   users: UserRecord[];
   sessions: SessionRecord[];
   posts: PostRecord[];
+  comments: CommentRecord[];
   stories: StoryRecord[];
   conversations: ConversationRecord[];
   messages: MessageRecord[];
@@ -97,6 +106,8 @@ export type PostDto = {
   saved: boolean;
   comments: number;
   gradient: string;
+  createdAt: string;
+  timeAgo: string;
   mediaUrl?: string;
   mediaType?: "image" | "video";
 };
@@ -127,4 +138,14 @@ export type ConversationDto = {
   unread: number;
   time: string;
   lastMessage: string;
+};
+
+export type CommentDto = {
+  id: string;
+  author: string;
+  handle: string;
+  avatarGradient: string;
+  text: string;
+  createdAt: string;
+  time: string;
 };

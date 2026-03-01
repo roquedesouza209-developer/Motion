@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { createPasswordHash } from "@/lib/server/crypto";
 import type {
+  CommentRecord,
   ConversationRecord,
   FollowRecord,
   MessageRecord,
@@ -62,6 +63,55 @@ function seedUser({
     avatarGradient,
     createdAt: toIsoWithMinuteOffset(-120),
   };
+}
+
+function createSeedComments(posts: PostRecord[]): CommentRecord[] {
+  const knownPostIds = new Set(posts.map((post) => post.id));
+  const comments: CommentRecord[] = [];
+
+  const pushComment = (comment: CommentRecord) => {
+    if (knownPostIds.has(comment.postId)) {
+      comments.push(comment);
+    }
+  };
+
+  pushComment({
+    id: "cmt_501",
+    postId: "pst_101",
+    userId: USER_IDS.ari,
+    text: "Those rooftop highlights are clean. The natural light really worked.",
+    createdAt: toIsoWithMinuteOffset(-35),
+  });
+  pushComment({
+    id: "cmt_502",
+    postId: "pst_101",
+    userId: USER_IDS.mina,
+    text: "Love the warmer grade on this set.",
+    createdAt: toIsoWithMinuteOffset(-32),
+  });
+  pushComment({
+    id: "cmt_503",
+    postId: "pst_102",
+    userId: USER_IDS.noah,
+    text: "That swipe timing is sharp. The pacing lands.",
+    createdAt: toIsoWithMinuteOffset(-24),
+  });
+  pushComment({
+    id: "cmt_504",
+    postId: "pst_103",
+    userId: USER_IDS.lena,
+    text: "The skin tones feel balanced without losing the street mood.",
+    createdAt: toIsoWithMinuteOffset(-14),
+  });
+  pushComment({
+    id: "cmt_505",
+    postId: "pst_104",
+    userId: USER_IDS.demo,
+    text: "The BTS framing is strong. The new lens profile looks crisp.",
+    createdAt: toIsoWithMinuteOffset(-8),
+  });
+
+  return comments;
 }
 
 function createSeedDatabase(): MotionDb {
@@ -330,11 +380,13 @@ function createSeedDatabase(): MotionDb {
   ];
 
   const sessions: SessionRecord[] = [];
+  const comments = createSeedComments(posts);
 
   return {
     users,
     sessions,
     posts,
+    comments,
     stories,
     conversations,
     messages,
@@ -348,19 +400,36 @@ function normalizeDatabase(raw: unknown): MotionDb {
   }
 
   const candidate = raw as Partial<MotionDb>;
+  const normalizedPosts = Array.isArray(candidate.posts)
+    ? (candidate.posts as Partial<PostRecord>[]).map((post) => ({
+        ...(post as PostRecord),
+        likedBy: Array.isArray(post.likedBy) ? post.likedBy : [],
+        savedBy: Array.isArray(post.savedBy) ? post.savedBy : [],
+        commentCount: typeof post.commentCount === "number" ? post.commentCount : 0,
+      }))
+    : [];
+  const normalizedComments = Array.isArray(candidate.comments)
+    ? (candidate.comments as CommentRecord[])
+    : createSeedComments(normalizedPosts);
+  const commentTotals = new Map<string, number>();
+
+  normalizedComments.forEach((comment) => {
+    commentTotals.set(
+      comment.postId,
+      (commentTotals.get(comment.postId) ?? 0) + 1,
+    );
+  });
 
   return {
     users: Array.isArray(candidate.users) ? (candidate.users as UserRecord[]) : [],
     sessions: Array.isArray(candidate.sessions)
       ? (candidate.sessions as SessionRecord[])
       : [],
-    posts: Array.isArray(candidate.posts)
-      ? (candidate.posts as Partial<PostRecord>[]).map((post) => ({
-          ...(post as PostRecord),
-          likedBy: Array.isArray(post.likedBy) ? post.likedBy : [],
-          savedBy: Array.isArray(post.savedBy) ? post.savedBy : [],
-        }))
-      : [],
+    posts: normalizedPosts.map((post) => ({
+      ...post,
+      commentCount: Math.max(post.commentCount, commentTotals.get(post.id) ?? 0),
+    })),
+    comments: normalizedComments,
     stories: Array.isArray(candidate.stories) ? (candidate.stories as StoryRecord[]) : [],
     conversations: Array.isArray(candidate.conversations)
       ? (candidate.conversations as ConversationRecord[])

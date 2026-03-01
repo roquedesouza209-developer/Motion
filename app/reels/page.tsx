@@ -1,5 +1,6 @@
 "use client";
 
+import LivePostAge from "@/components/live-post-age";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -17,6 +18,8 @@ type ReelPost = {
   saved: boolean;
   comments: number;
   gradient: string;
+  createdAt: string;
+  timeAgo: string;
   mediaUrl?: string;
   mediaType?: MediaType;
 };
@@ -24,6 +27,12 @@ type ReelPost = {
 type ReelResponse = {
   posts: ReelPost[];
 };
+
+function sortByNewest<T extends { createdAt: string }>(items: T[]): T[] {
+  return [...items].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
 
 async function loadScope(scope: "following" | "discover"): Promise<ReelPost[]> {
   const response = await fetch(`/api/posts?scope=${scope}`, { cache: "no-store" });
@@ -159,6 +168,10 @@ function ReelCard({
           Reels
         </div>
 
+        <div className="pointer-events-none absolute right-5 top-5 rounded-full bg-black/35 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-md">
+          <LivePostAge createdAt={reel.createdAt} initialLabel={reel.timeAgo} />
+        </div>
+
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 px-5 pb-8 pt-16">
           <div className="max-w-md space-y-2">
             <p className="text-sm font-semibold">
@@ -222,7 +235,7 @@ export default function ReelsPage() {
           }
         }
 
-        setReels([...unique.values()]);
+        setReels(sortByNewest([...unique.values()]));
       } catch (loadError) {
         setError(
           loadError instanceof Error ? loadError.message : "Failed to load reels.",

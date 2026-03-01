@@ -1,5 +1,6 @@
 "use client";
 
+import LivePostAge from "@/components/live-post-age";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,6 +29,8 @@ type Post = {
   saved: boolean;
   comments: number;
   gradient: string;
+  createdAt: string;
+  timeAgo: string;
   mediaUrl?: string;
   mediaType?: MediaType;
 };
@@ -106,6 +109,9 @@ function MediaTile({
       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/0 to-black/70" />
       <div className="absolute left-3 top-3 rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
         {post.kind}
+      </div>
+      <div className="absolute right-3 top-3 rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
+        <LivePostAge createdAt={post.createdAt} initialLabel={post.timeAgo} />
       </div>
       <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-3">
         <div className="min-w-0 text-white">

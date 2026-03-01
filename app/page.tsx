@@ -1,5 +1,6 @@
 "use client";
 
+import LivePostAge from "@/components/live-post-age";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -52,6 +53,8 @@ type Post = {
   saved: boolean;
   comments: number;
   gradient: string;
+  createdAt: string;
+  timeAgo: string;
   mediaUrl?: string;
   mediaType?: MediaType;
 };
@@ -84,10 +87,19 @@ type NotificationEntry = {
   tone: "follow" | "like" | "comment";
 };
 
+type CommentEntry = {
+  id: string;
+  author: string;
+  handle: string;
+  avatarGradient: string;
+  text: string;
+  createdAt: string;
+  time: string;
+};
+
 const DEMO_EMAIL = "demo@motion.app";
 const DEMO_PASSWORD = "demo12345";
 const DEFAULT_POST_LOCATION = "";
-const tags = ["Street Portraits", "Travel Reels", "Color Grading", "Studio Lighting"];
 const THEME_OPTIONS: { id: ThemeSelection; label: string }[] = [
   { id: "dark", label: "Dark" },
   { id: "light", label: "Light" },
@@ -102,6 +114,12 @@ const THEME_OPTIONS: { id: ThemeSelection; label: string }[] = [
 
 function isThemeSelection(input: string | null): input is ThemeSelection {
   return THEME_OPTIONS.some((option) => option.id === input);
+}
+
+function sortByNewest<T extends { createdAt: string }>(items: T[]): T[] {
+  return [...items].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
 }
 
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
@@ -488,12 +506,24 @@ export default function Home() {
   const [chatOpen, setChatOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>([]);
   const [heartBurst, setHeartBurst] = useState<{ postId: string; token: number } | null>(null);
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+  const [commentEntries, setCommentEntries] = useState<CommentEntry[]>([]);
+  const [commentsTotal, setCommentsTotal] = useState(0);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
   const composerCaptionRef = useRef<HTMLTextAreaElement | null>(null);
   const storyCaptionRef = useRef<HTMLTextAreaElement | null>(null);
   const headerActionsRef = useRef<HTMLDivElement | null>(null);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const feedSectionRef = useRef<HTMLElement | null>(null);
   const heartBurstTimerRef = useRef<number | null>(null);
+  const notificationsStorageKey = user
+    ? `motion-seen-notifications:${user.id}`
+    : null;
 
   const loadData = async (scope: FeedView) => {
     const [storiesRes, postsRes, savedRes, convoRes] = await Promise.all([
@@ -535,6 +565,42 @@ export default function Home() {
     window.localStorage.setItem("motion-theme", themeSelection);
     document.documentElement.setAttribute("data-theme", resolvedTheme);
   }, [themeSelection, systemPrefersDark]);
+
+  useEffect(() => {
+    if (!notificationsStorageKey) {
+      setSeenNotificationIds([]);
+      return;
+    }
+
+    const stored = window.localStorage.getItem(notificationsStorageKey);
+
+    if (!stored) {
+      setSeenNotificationIds([]);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(stored) as unknown;
+      setSeenNotificationIds(
+        Array.isArray(parsed)
+          ? parsed.filter((value): value is string => typeof value === "string")
+          : [],
+      );
+    } catch {
+      setSeenNotificationIds([]);
+    }
+  }, [notificationsStorageKey]);
+
+  useEffect(() => {
+    if (!notificationsStorageKey) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      notificationsStorageKey,
+      JSON.stringify(seenNotificationIds),
+    );
+  }, [notificationsStorageKey, seenNotificationIds]);
 
   useEffect(() => {
     const boot = async () => {
@@ -608,13 +674,14 @@ export default function Home() {
     };
   }, []);
 
+  const sortedPosts = useMemo(() => sortByNewest(posts), [posts]);
   const photoPosts = useMemo(
-    () => posts.filter((post) => post.kind === "Photo"),
-    [posts],
+    () => sortedPosts.filter((post) => post.kind === "Photo"),
+    [sortedPosts],
   );
   const reels = useMemo(
-    () => posts.filter((post) => post.kind === "Reel"),
-    [posts],
+    () => sortedPosts.filter((post) => post.kind === "Reel"),
+    [sortedPosts],
   );
   const visiblePosts = contentView === "posts" ? photoPosts : reels;
   const notificationItems = useMemo<NotificationEntry[]>(() => {
@@ -624,11 +691,11 @@ export default function Home() {
       "Ari Rowan";
     const likeSource =
       photoPosts.find((post) => post.author !== user?.name) ??
-      posts.find((post) => post.author !== user?.name) ??
+      sortedPosts.find((post) => post.author !== user?.name) ??
       null;
     const commentSource =
       reels.find((post) => post.author !== user?.name) ??
-      posts.find((post) => post.author !== user?.name) ??
+      sortedPosts.find((post) => post.author !== user?.name) ??
       null;
 
     return [
@@ -658,17 +725,59 @@ export default function Home() {
           ? `${commentSource.comments} comments`
           : "New comment",
         tone: "comment",
-      },
-    ];
+        },
+      ];
   }, [conversations, photoPosts, posts, reels, stories, user]);
-  const notificationCount = notificationItems.length;
+  const unseenNotificationItems = useMemo(
+    () =>
+      notificationItems.filter(
+        (notification) => !seenNotificationIds.includes(notification.id),
+      ),
+    [notificationItems, seenNotificationIds],
+  );
+  const earlierNotificationItems = useMemo(
+    () =>
+      notificationItems.filter((notification) =>
+        seenNotificationIds.includes(notification.id),
+      ),
+    [notificationItems, seenNotificationIds],
+  );
+  const notificationCount = unseenNotificationItems.length;
   const activeConversation = useMemo(
     () =>
       conversations.find((conversation) => conversation.id === activeId) ?? null,
     [conversations, activeId],
   );
+  const activeCommentsPost = useMemo(
+    () => posts.find((post) => post.id === commentsPostId) ?? null,
+    [commentsPostId, posts],
+  );
 
   const unread = conversations.reduce((sum, convo) => sum + convo.unread, 0);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return;
+    }
+
+    setSeenNotificationIds((current) => {
+      if (notificationItems.length === 0) {
+        return current;
+      }
+
+      const next = new Set(current);
+
+      notificationItems.forEach((notification) => {
+        next.add(notification.id);
+      });
+
+      if (next.size === current.length) {
+        return current;
+      }
+
+      return [...next];
+    });
+  }, [notificationItems, notificationsOpen]);
 
   useEffect(() => {
     if (!notificationsOpen && !profileMenuOpen) {
@@ -682,7 +791,10 @@ export default function Home() {
         return;
       }
 
-      if (headerActionsRef.current?.contains(target)) {
+      if (
+        headerActionsRef.current?.contains(target) ||
+        profileMenuRef.current?.contains(target)
+      ) {
         return;
       }
 
@@ -699,6 +811,7 @@ export default function Home() {
     setChatOpen(false);
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
+    setCommentsPostId(null);
     setStoryComposerOpen(false);
     setComposerMode(mode);
     if (mode === "story") {
@@ -713,6 +826,7 @@ export default function Home() {
     setChatOpen(false);
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
+    setCommentsPostId(null);
     setComposerOpen(false);
     setStoryKind("Photo");
     setStoryFile(null);
@@ -725,6 +839,7 @@ export default function Home() {
     setStoryComposerOpen(false);
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
+    setCommentsPostId(null);
     setActiveId((current) => current ?? conversations[0]?.id ?? null);
     setChatOpen(true);
   };
@@ -735,6 +850,7 @@ export default function Home() {
     setStoryComposerOpen(false);
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
+    setCommentsPostId(null);
     setChatOpen(false);
     setContentView(view);
     feedSectionRef.current?.scrollIntoView({
@@ -749,6 +865,7 @@ export default function Home() {
     setStoryComposerOpen(false);
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
+    setCommentsPostId(null);
     setChatOpen(false);
     setContentView("posts");
     window.scrollTo({
@@ -780,6 +897,7 @@ export default function Home() {
       setChatOpen(false);
       setNotificationsOpen(false);
       setProfileMenuOpen(false);
+      setCommentsPostId(null);
       setUser(null);
       setStories([]);
       setPosts([]);
@@ -825,6 +943,85 @@ export default function Home() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Like failed");
       await loadData(feedView);
+    }
+  };
+
+  const closeComments = () => {
+    if (commentSubmitting) {
+      return;
+    }
+
+    setCommentsPostId(null);
+    setCommentEntries([]);
+    setCommentsTotal(0);
+    setCommentDraft("");
+    setCommentsError(null);
+  };
+
+  const openComments = async (postId: string) => {
+    setCommentsPostId(postId);
+    setCommentsLoading(true);
+    setCommentsError(null);
+    setCommentEntries([]);
+    setCommentDraft("");
+
+    try {
+      const payload = await req<{ comments: CommentEntry[]; total: number }>(
+        `/api/posts/${postId}/comments`,
+      );
+      setCommentEntries(payload.comments);
+      setCommentsTotal(payload.total);
+    } catch (e) {
+      setCommentsError(
+        e instanceof Error ? e.message : "Failed to load comments",
+      );
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const submitComment = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!commentsPostId) {
+      return;
+    }
+
+    const textValue = commentDraft.trim();
+
+    if (!textValue) {
+      setCommentsError("Comment cannot be empty.");
+      return;
+    }
+
+    setCommentSubmitting(true);
+    setCommentsError(null);
+
+    try {
+      const payload = await req<{ comment: CommentEntry; total: number }>(
+        `/api/posts/${commentsPostId}/comments`,
+        {
+          method: "POST",
+          body: JSON.stringify({ text: textValue }),
+        },
+      );
+
+      setCommentEntries((current) => [...current, payload.comment]);
+      setCommentsTotal(payload.total);
+      setCommentDraft("");
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === commentsPostId
+            ? { ...post, comments: payload.total }
+            : post,
+        ),
+      );
+    } catch (e) {
+      setCommentsError(
+        e instanceof Error ? e.message : "Failed to post comment",
+      );
+    } finally {
+      setCommentSubmitting(false);
     }
   };
 
@@ -1092,14 +1289,7 @@ export default function Home() {
               Motion
             </p>
           </div>
-          <div
-            ref={headerActionsRef}
-            className="relative z-40 flex flex-wrap items-center justify-end gap-2"
-          >
-            <ThemePicker
-              selectedTheme={themeSelection}
-              onThemeChange={setThemeSelection}
-            />
+          <div className="relative z-40 flex flex-wrap items-center justify-end gap-2">
             <button
               onClick={() => openComposer()}
               className="grid h-10 w-10 place-items-center rounded-xl border border-[var(--line)] bg-white text-lg font-semibold text-slate-700"
@@ -1109,93 +1299,7 @@ export default function Home() {
             >
               +
             </button>
-            <div className="relative z-40">
-              <button
-                className="relative grid h-10 w-10 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-700"
-                type="button"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                  setNotificationsOpen((current) => !current);
-                }}
-                aria-label="Notifications"
-                aria-expanded={notificationsOpen}
-                title="Notifications"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M10 3.1a3.1 3.1 0 0 0-3.1 3.1v1.1c0 .7-.2 1.4-.6 2l-1.1 1.8c-.3.5 0 1.1.6 1.1h8.4c.6 0 .9-.6.6-1.1l-1.1-1.8c-.4-.6-.6-1.3-.6-2V6.2A3.1 3.1 0 0 0 10 3.1Z" />
-                  <path d="M8.5 14.7a1.8 1.8 0 0 0 3 0" />
-                </svg>
-                {notificationCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-white">
-                    {notificationCount}
-                  </span>
-                ) : null}
-              </button>
-              {notificationsOpen ? (
-                <div className="motion-surface header-popover header-popover-wide p-2">
-                  <div className="rounded-xl bg-white/90 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">Notifications</p>
-                        <p className="text-[11px] text-slate-500">Latest activity on your account</p>
-                      </div>
-                      {notificationCount > 0 ? (
-                        <span className="grid h-6 min-w-6 place-items-center rounded-full bg-[var(--brand)] px-1.5 text-[11px] font-bold text-white">
-                          {notificationCount}
-                        </span>
-                      ) : null}
-                    </div>
-                    {notificationItems.length > 0 ? (
-                      <div className="mt-3 space-y-2">
-                        {notificationItems.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className="w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-left"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                      notification.tone === "follow"
-                                        ? "bg-sky-100 text-sky-700"
-                                        : notification.tone === "like"
-                                          ? "bg-rose-100 text-rose-700"
-                                          : "bg-amber-100 text-amber-700"
-                                    }`}
-                                  >
-                                    {notification.title}
-                                  </span>
-                                </div>
-                                <p className="mt-0.5 break-words text-xs text-slate-500">
-                                  {notification.detail}
-                                </p>
-                              </div>
-                              <span className="shrink-0 text-[11px] text-slate-500">
-                                {notification.meta}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-3 rounded-xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
-                        No new notifications. You are caught up.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            <div className="relative z-40">
+            <div ref={profileMenuRef} className="relative z-40">
               <button
                 type="button"
                 onClick={() => {
@@ -1605,13 +1709,149 @@ export default function Home() {
           </div>
         ) : null}
 
-        {error && !composerOpen && !storyComposerOpen ? (
+        {commentsPostId ? (
+          <div
+            className="fixed inset-0 z-[92] grid place-items-center bg-slate-950/25 px-4 backdrop-blur-sm"
+            onClick={closeComments}
+          >
+            <section
+              className="motion-surface w-full max-w-2xl p-5"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Comments"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2
+                    className="text-xl font-semibold text-slate-900"
+                    style={{ fontFamily: "var(--font-heading)" }}
+                  >
+                    Comments
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {activeCommentsPost
+                      ? `${activeCommentsPost.author} · ${commentsTotal} comments`
+                      : `${commentsTotal} comments`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeComments}
+                  className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
+                  aria-label="Close comments"
+                  disabled={commentSubmitting}
+                >
+                  x
+                </button>
+              </div>
+
+              {activeCommentsPost ? (
+                <div className="mt-4 rounded-2xl border border-[var(--line)] bg-white px-4 py-3">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {activeCommentsPost.author}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {activeCommentsPost.caption}
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="mt-4 max-h-[45vh] space-y-3 overflow-y-auto pr-1">
+                {commentsLoading ? (
+                  <p className="rounded-2xl border border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
+                    Loading comments...
+                  </p>
+                ) : commentEntries.length > 0 ? (
+                  <>
+                    {commentEntries.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="rounded-2xl border border-[var(--line)] bg-white px-4 py-3"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white"
+                            style={{ background: comment.avatarGradient }}
+                          >
+                            {comment.author
+                              .split(" ")
+                              .map((part) => part[0])
+                              .join("")
+                              .slice(0, 2)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <p className="text-sm font-semibold text-slate-900">
+                                {comment.author}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {comment.handle}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {comment.time}
+                              </p>
+                            </div>
+                            <p className="mt-1 text-sm text-slate-700">
+                              {comment.text}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {commentsTotal > commentEntries.length ? (
+                      <p className="px-1 text-xs text-slate-500">
+                        Showing {commentEntries.length} visible comments.{" "}
+                        {commentsTotal - commentEntries.length} older comments are not
+                        loaded in this preview.
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="rounded-2xl border border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
+                    No comments yet. Start the conversation.
+                  </p>
+                )}
+              </div>
+
+              <form onSubmit={submitComment} className="mt-4 space-y-3">
+                <textarea
+                  value={commentDraft}
+                  onChange={(event) => setCommentDraft(event.target.value)}
+                  className="min-h-24 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-sm"
+                  placeholder="Write a comment..."
+                  maxLength={280}
+                  autoFocus
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-slate-500">
+                      {commentDraft.trim().length}/280
+                    </p>
+                    {commentsError ? (
+                      <p className="mt-1 text-xs text-red-700">{commentsError}</p>
+                    ) : null}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={commentSubmitting || commentsLoading}
+                    className="h-10 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    {commentSubmitting ? "Posting..." : "Post Comment"}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        ) : null}
+
+        {error && !composerOpen && !storyComposerOpen && !commentsPostId ? (
           <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </p>
         ) : null}
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="mt-5 grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)_280px]">
           <aside className="motion-surface self-start p-4">
             <div className="mb-4 flex items-center gap-3">
               <div
@@ -1658,6 +1898,16 @@ export default function Home() {
                   onClick={() => router.push("/reels")}
                   className="nav-item mb-2 w-full text-left text-sm"
                   aria-label="Open reels page"
+                >
+                  {item}
+                </button>
+              ) : item === "Explore" ? (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => router.push("/explore")}
+                  className="nav-item mb-2 w-full text-left text-sm"
+                  aria-label="Open explore page"
                 >
                   {item}
                 </button>
@@ -1748,9 +1998,17 @@ export default function Home() {
                           {post.location ? `${post.handle} - ${post.location}` : post.handle}
                         </p>
                       </div>
-                      <span className="rounded-full bg-[var(--brand-soft)] px-2 py-1 text-[11px]">
-                        {post.kind}
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-[11px] text-slate-500">
+                          <LivePostAge
+                            createdAt={post.createdAt}
+                            initialLabel={post.timeAgo}
+                          />
+                        </span>
+                        <span className="rounded-full bg-[var(--brand-soft)] px-2 py-1 text-[11px]">
+                          {post.kind}
+                        </span>
+                      </div>
                     </div>
                     <div
                       className="post-media-frame mb-3"
@@ -1789,9 +2047,13 @@ export default function Home() {
                         >
                           Like {post.likes}
                         </button>
-                        <span className="rounded-full border border-[var(--line)] px-3 py-1">
+                        <button
+                          type="button"
+                          onClick={() => void openComments(post.id)}
+                          className="rounded-full border border-[var(--line)] px-3 py-1"
+                        >
                           Comments {post.comments}
-                        </span>
+                        </button>
                       </div>
                       <button
                         type="button"
@@ -1818,18 +2080,164 @@ export default function Home() {
                 ) : null}
               </div>
             </section>
+          </section>
 
+          <aside ref={headerActionsRef} className="space-y-5 self-start xl:sticky xl:top-6">
             <section className="motion-surface p-4">
-              <h2 className="mb-2 font-semibold">Discover</h2>
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <span key={tag} className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-xs">
-                    {tag}
-                  </span>
-                ))}
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Theme</p>
+                  <p className="text-[11px] text-slate-500">Adjust the look without crowding the header.</p>
+                </div>
+                <ThemePicker
+                  selectedTheme={themeSelection}
+                  onThemeChange={setThemeSelection}
+                />
               </div>
             </section>
-          </section>
+
+            <section className="motion-surface p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Notifications</p>
+                  <p className="text-[11px] text-slate-500">Follows, likes, and comments.</p>
+                </div>
+                <button
+                  className="relative grid h-10 w-10 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-700"
+                  type="button"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    setNotificationsOpen((current) => !current);
+                  }}
+                  aria-label="Notifications"
+                  aria-expanded={notificationsOpen}
+                  title="Notifications"
+                >
+                  <svg
+                    viewBox="0 0 20 20"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M10 3.1a3.1 3.1 0 0 0-3.1 3.1v1.1c0 .7-.2 1.4-.6 2l-1.1 1.8c-.3.5 0 1.1.6 1.1h8.4c.6 0 .9-.6.6-1.1l-1.1-1.8c-.4-.6-.6-1.3-.6-2V6.2A3.1 3.1 0 0 0 10 3.1Z" />
+                    <path d="M8.5 14.7a1.8 1.8 0 0 0 3 0" />
+                  </svg>
+                  {notificationCount > 0 ? (
+                    <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-white">
+                      {notificationCount}
+                    </span>
+                  ) : null}
+                </button>
+              </div>
+
+              {notificationsOpen ? (
+                <div className="mt-4 space-y-4">
+                  {unseenNotificationItems.length > 0 ? (
+                    <div>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                          New
+                        </p>
+                        <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                          {unseenNotificationItems.length}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {unseenNotificationItems.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className="w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-left"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                      notification.tone === "follow"
+                                        ? "bg-sky-100 text-sky-700"
+                                        : notification.tone === "like"
+                                          ? "bg-rose-100 text-rose-700"
+                                          : "bg-amber-100 text-amber-700"
+                                    }`}
+                                  >
+                                    {notification.title}
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 break-words text-xs text-slate-500">
+                                  {notification.detail}
+                                </p>
+                              </div>
+                              <span className="shrink-0 text-[11px] text-slate-500">
+                                {notification.meta}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {earlierNotificationItems.length > 0 ? (
+                    <div>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                          Earlier
+                        </p>
+                        <span className="text-[10px] text-slate-500">
+                          Already viewed
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {earlierNotificationItems.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className="w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2 text-left opacity-60"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                      notification.tone === "follow"
+                                        ? "bg-sky-100 text-sky-700"
+                                        : notification.tone === "like"
+                                          ? "bg-rose-100 text-rose-700"
+                                          : "bg-amber-100 text-amber-700"
+                                    }`}
+                                  >
+                                    {notification.title}
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 break-words text-xs text-slate-500">
+                                  {notification.detail}
+                                </p>
+                              </div>
+                              <span className="shrink-0 text-[11px] text-slate-500">
+                                {notification.meta}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {notificationItems.length === 0 ? (
+                    <p className="rounded-2xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
+                      No notifications right now.
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="mt-4 rounded-2xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
+                  Keep this closed until you need it. The feed stays central and easier to scan.
+                </p>
+              )}
+            </section>
+          </aside>
         </div>
       </main>
       {chatOpen ? (

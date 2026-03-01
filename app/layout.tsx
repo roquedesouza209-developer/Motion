@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
+import SplashScreen from "./splash-screen";
 import "./globals.css";
 
 const fontVariables = {
@@ -21,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body style={fontVariables} className="antialiased">
-        {children}
+        <SplashScreen>{children}</SplashScreen>
       </body>
     </html>
   );

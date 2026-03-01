@@ -1,4 +1,6 @@
 import type {
+  CommentDto,
+  CommentRecord,
   PostDto,
   PostRecord,
   Presence,
@@ -25,6 +27,38 @@ export function formatRelativeTime(isoDate: string): string {
 
   const days = Math.floor(diff / day);
   return `${days}d`;
+}
+
+export function formatPostAge(isoDate: string): string {
+  const diff = Math.max(1_000, Date.now() - new Date(isoDate).getTime());
+  const second = 1_000;
+  const minute = 60 * second;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const week = 7 * day;
+
+  if (diff < minute) {
+    const seconds = Math.max(1, Math.floor(diff / second));
+    return `${seconds} ${seconds === 1 ? "Sec" : "Secs"} ago`;
+  }
+
+  if (diff < hour) {
+    const minutes = Math.floor(diff / minute);
+    return `${minutes} ${minutes === 1 ? "Min" : "Mins"} ago`;
+  }
+
+  if (diff < day) {
+    const hours = Math.floor(diff / hour);
+    return `${hours} ${hours === 1 ? "Hr" : "Hrs"} ago`;
+  }
+
+  if (diff < week) {
+    const days = Math.floor(diff / day);
+    return `${days} ${days === 1 ? "Day" : "Days"} ago`;
+  }
+
+  const weeks = Math.floor(diff / week);
+  return `${weeks} ${weeks === 1 ? "Week" : "Weeks"} ago`;
 }
 
 export function resolvePresence(userId: string): Presence {
@@ -75,6 +109,8 @@ export function mapPostToDto({
     saved: currentUserId ? post.savedBy.includes(currentUserId) : false,
     comments: post.commentCount,
     gradient: post.gradient,
+    createdAt: post.createdAt,
+    timeAgo: formatPostAge(post.createdAt),
     mediaUrl: post.mediaUrl,
     mediaType: post.mediaType,
   };
@@ -103,5 +139,26 @@ export function mapStoryToDto({
     seen: currentUserId ? story.seenBy.includes(currentUserId) : false,
     mediaUrl: story.mediaUrl,
     mediaType: story.mediaType,
+  };
+}
+
+export function mapCommentToDto({
+  comment,
+  usersById,
+}: {
+  comment: CommentRecord;
+  usersById: Map<string, UserRecord>;
+}): CommentDto {
+  const author = usersById.get(comment.userId);
+
+  return {
+    id: comment.id,
+    author: author?.name ?? "Unknown Creator",
+    handle: author ? `@${author.handle}` : "@unknown",
+    avatarGradient:
+      author?.avatarGradient ?? "linear-gradient(135deg, #94a3b8, #64748b)",
+    text: comment.text,
+    createdAt: comment.createdAt,
+    time: formatRelativeTime(comment.createdAt),
   };
 }

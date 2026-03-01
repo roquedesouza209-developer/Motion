@@ -113,7 +113,6 @@
       "location": "Seattle, WA",
       "gradient": "linear-gradient(145deg, #f6d365, #fda085)",
       "likedBy": [
-        "usr_demo",
         "usr_ari",
         "usr_ty"
       ],
@@ -200,9 +199,7 @@
       ],
       "commentCount": 0,
       "createdAt": "2026-02-27T18:42:19.197Z",
-      "savedBy": [
-        "usr_demo"
-      ]
+      "savedBy": []
     },
     {
       "id": "pst_406a130fd60d4a62999d6a8684ccc55b",
@@ -219,28 +216,56 @@
       ],
       "commentCount": 0,
       "createdAt": "2026-02-28T08:59:38.369Z",
-      "savedBy": []
+      "savedBy": [
+        "usr_demo"
+      ]
+    }
+  ],
+  "comments": [
+    {
+      "id": "cmt_501",
+      "postId": "pst_101",
+      "userId": "usr_ari",
+      "text": "Those rooftop highlights are clean. The natural light really worked.",
+      "createdAt": "2026-03-01T07:26:26.096Z"
+    },
+    {
+      "id": "cmt_502",
+      "postId": "pst_101",
+      "userId": "usr_mina",
+      "text": "Love the warmer grade on this set.",
+      "createdAt": "2026-03-01T07:29:26.096Z"
+    },
+    {
+      "id": "cmt_503",
+      "postId": "pst_102",
+      "userId": "usr_noah",
+      "text": "That swipe timing is sharp. The pacing lands.",
+      "createdAt": "2026-03-01T07:37:26.096Z"
+    },
+    {
+      "id": "cmt_504",
+      "postId": "pst_103",
+      "userId": "usr_lena",
+      "text": "The skin tones feel balanced without losing the street mood.",
+      "createdAt": "2026-03-01T07:47:26.096Z"
+    },
+    {
+      "id": "cmt_505",
+      "postId": "pst_104",
+      "userId": "usr_demo",
+      "text": "The BTS framing is strong. The new lens profile looks crisp.",
+      "createdAt": "2026-03-01T07:53:26.096Z"
     }
   ],
   "stories": [
     {
-      "id": "sty_62fb91d2a459411e8312e7ed77d6d361",
+      "id": "sty_5a4808cb09334fd682b67c026f29a472",
       "userId": "usr_demo",
-      "caption": "The guy was crying lik efr",
-      "gradient": "linear-gradient(135deg, #ff8f6b, #ff5f6d)",
-      "createdAt": "2026-02-28T09:39:28.676Z",
-      "expiresAt": "2026-03-01T09:39:28.676Z",
-      "seenBy": [
-        "usr_demo"
-      ]
-    },
-    {
-      "id": "sty_f4516cf882e947018e3d34cc9c0e51bf",
-      "userId": "usr_demo",
-      "caption": "yokljkkkkkkkkkkkkkkkkkkkkkkkkk",
-      "gradient": "linear-gradient(135deg, #00a3a3, #00b1ff)",
-      "createdAt": "2026-02-28T09:39:40.416Z",
-      "expiresAt": "2026-03-01T09:39:40.416Z",
+      "caption": "yuuuuuuuuuuuuuuuuuuuuuuuutyt",
+      "gradient": "linear-gradient(135deg, #ffc048, #ff6b6b)",
+      "createdAt": "2026-03-01T07:52:44.108Z",
+      "expiresAt": "2026-03-02T07:52:44.108Z",
       "seenBy": [
         "usr_demo"
       ]
