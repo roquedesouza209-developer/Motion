@@ -11,6 +11,7 @@ type Presence = "Online" | "Away";
 type PostKind = "Photo" | "Reel";
 type ComposerMode = "post" | "reel" | "story";
 type MediaType = "image" | "video";
+type ViewportMode = "desktop" | "tablet" | "mobile";
 type ThemeSelection =
   | "system"
   | "light"
@@ -81,7 +82,7 @@ type UploadResponse = {
 
 type NotificationEntry = {
   id: string;
-  title: "New follower" | "Sparked your moment" | "Commented";
+  title: "New follower" | "Liked your post" | "Commented";
   detail: string;
   meta: string;
   tone: "follow" | "like" | "comment";
@@ -475,6 +476,71 @@ function SupportWidget({ defaultEmail }: { defaultEmail: string }) {
   );
 }
 
+function ViewportPicker({
+  mode,
+  onChange,
+}: {
+  mode: ViewportMode;
+  onChange: (next: ViewportMode) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const label = mode === "desktop" ? "Desktop" : mode === "tablet" ? "Tablet" : "Mobile";
+
+  return (
+    <div className="viewport-picker">
+      <button
+        type="button"
+        className="theme-trigger-button"
+        onClick={() => setOpen((current) => !current)}
+        aria-label="Switch viewport size"
+        aria-expanded={open}
+        title={`Viewport: ${label}`}
+      >
+        <svg
+          viewBox="0 0 20 20"
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="2.6" y="4" width="14.8" height="9.4" rx="1.6" />
+          <path d="M7.5 16h5" />
+          <path d="M9 13.4v2.6" />
+        </svg>
+      </button>
+      {open ? (
+        <div className="theme-menu motion-surface p-2">
+          <div className="space-y-1">
+            {([
+              { id: "desktop" as const, label: "Desktop" },
+              { id: "tablet" as const, label: "Tablet" },
+              { id: "mobile" as const, label: "Mobile" },
+            ]).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => {
+                  onChange(option.id);
+                  setOpen(false);
+                }}
+                className={`w-full rounded-lg border px-3 py-2 text-left text-xs font-semibold ${
+                  mode === option.id
+                    ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                    : "border-[var(--line)] bg-white text-slate-700"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -503,6 +569,7 @@ export default function Home() {
   const [publishing, setPublishing] = useState(false);
   const [themeSelection, setThemeSelection] = useState<ThemeSelection>("system");
   const [systemPrefersDark, setSystemPrefersDark] = useState(false);
+  const [viewportMode, setViewportMode] = useState<ViewportMode>("desktop");
   const [chatOpen, setChatOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -544,6 +611,11 @@ export default function Home() {
     const stored = window.localStorage.getItem("motion-theme");
     if (isThemeSelection(stored)) {
       setThemeSelection(stored);
+    }
+
+    const storedViewport = window.localStorage.getItem("motion-viewport");
+    if (storedViewport === "desktop" || storedViewport === "tablet" || storedViewport === "mobile") {
+      setViewportMode(storedViewport);
     }
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -601,6 +673,10 @@ export default function Home() {
       JSON.stringify(seenNotificationIds),
     );
   }, [notificationsStorageKey, seenNotificationIds]);
+
+  useEffect(() => {
+    window.localStorage.setItem("motion-viewport", viewportMode);
+  }, [viewportMode]);
 
   useEffect(() => {
     const boot = async () => {
@@ -708,11 +784,11 @@ export default function Home() {
       },
       {
         id: `like-${likeSource?.id ?? "latest"}`,
-        title: "Sparked your moment",
+        title: "Liked your post",
         detail: `${
           likeSource?.author ?? "Mina Roe"
-        } sparked your latest moment.`,
-        meta: likeSource ? `${likeSource.likes} sparks` : "New activity",
+        } liked your latest post.`,
+        meta: likeSource ? `${likeSource.likes} likes` : "New activity",
         tone: "like",
       },
       {
@@ -720,7 +796,7 @@ export default function Home() {
         title: "Commented",
         detail: `${
           commentSource?.author ?? "Noah Kim"
-        } commented on your moment.`,
+        } commented on your post.`,
         meta: commentSource
           ? `${commentSource.comments} comments`
           : "New comment",
@@ -1278,8 +1354,9 @@ export default function Home() {
   }
 
   return (
-    <div className="motion-shell min-h-screen">
-      <main className="mx-auto max-w-[1280px] px-4 pb-20 pt-6">
+    <div className="motion-shell min-h-screen" data-viewport={viewportMode}>
+      <div className="motion-viewport">
+        <main className="w-full px-4 pb-20 pt-6">
         <header className="motion-surface relative z-50 flex flex-wrap items-center justify-between gap-3 overflow-visible px-4 py-4">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[var(--brand)] text-sm font-bold text-white">
@@ -1290,6 +1367,7 @@ export default function Home() {
             </p>
           </div>
           <div className="relative z-40 flex flex-wrap items-center justify-end gap-2">
+            <ViewportPicker mode={viewportMode} onChange={setViewportMode} />
             <button
               onClick={() => openComposer()}
               className="grid h-10 w-10 place-items-center rounded-xl border border-[var(--line)] bg-white text-lg font-semibold text-slate-700"
@@ -1359,26 +1437,6 @@ export default function Home() {
             </div>
           </div>
         </header>
-
-        <button
-          type="button"
-          onClick={() => openComposer()}
-          className="motion-surface mt-3 flex w-full items-center gap-3 p-3 text-left"
-        >
-          <div
-            className="grid h-11 w-11 place-items-center rounded-full text-xs font-bold text-white"
-            style={{ background: user.avatarGradient }}
-          >
-            {user.name
-              .split(" ")
-              .map((part) => part[0])
-              .join("")
-              .slice(0, 2)}
-          </div>
-          <div className="flex-1 rounded-full border border-[var(--line)] bg-white px-4 py-3 text-sm text-slate-500">
-            What&apos;s on your mind?
-          </div>
-        </button>
 
         {composerOpen ? (
           <div
@@ -1869,8 +1927,8 @@ export default function Home() {
                 <p className="text-xs text-slate-500">@{user.handle}</p>
               </div>
             </div>
-            {["Flow", "Cuts", "Threads", "Radar"].map((item) => (
-              item === "Flow" ? (
+            {["Home", "Reels", "Messages", "Explore"].map((item) => (
+              item === "Home" ? (
                 <button
                   key={item}
                   type="button"
@@ -1880,7 +1938,7 @@ export default function Home() {
                 >
                   {item}
                 </button>
-              ) : item === "Threads" ? (
+              ) : item === "Messages" ? (
                 <button
                   key={item}
                   type="button"
@@ -1891,23 +1949,23 @@ export default function Home() {
                   {item}
                   {unread > 0 ? ` (${unread})` : ""}
                 </button>
-              ) : item === "Cuts" ? (
+              ) : item === "Reels" ? (
                 <button
                   key={item}
                   type="button"
                   onClick={() => router.push("/reels")}
                   className="nav-item mb-2 w-full text-left text-sm"
-                  aria-label="Open cuts page"
+                  aria-label="Open reels page"
                 >
                   {item}
                 </button>
-              ) : item === "Radar" ? (
+              ) : item === "Explore" ? (
                 <button
                   key={item}
                   type="button"
                   onClick={() => router.push("/explore")}
                   className="nav-item mb-2 w-full text-left text-sm"
-                  aria-label="Open radar page"
+                  aria-label="Open explore page"
                 >
                   {item}
                 </button>
@@ -1974,7 +2032,7 @@ export default function Home() {
                     onClick={() => openContentView("posts")}
                     type="button"
                   >
-                    Moments
+                    Posts
                   </button>
                   <button
                     className={`rounded-full px-3 py-1 text-sm ${
@@ -1983,11 +2041,11 @@ export default function Home() {
                     onClick={() => openContentView("reels")}
                     type="button"
                   >
-                    Cuts
+                    Reels
                   </button>
                 </div>
                 <span className="text-xs text-slate-500">
-                  {visiblePosts.length} {contentView === "posts" ? "Moments" : "Cuts"}
+                  {visiblePosts.length} {contentView === "posts" ? "Posts" : "Reels"}
                 </span>
               </div>
 
@@ -2009,7 +2067,7 @@ export default function Home() {
                           />
                         </span>
                         <span className="rounded-full bg-[var(--brand-soft)] px-2 py-1 text-[11px]">
-                          {post.kind === "Reel" ? "Cut" : "Moment"}
+                          {post.kind}
                         </span>
                       </div>
                     </div>
@@ -2048,7 +2106,7 @@ export default function Home() {
                           }`}
                           type="button"
                         >
-                          Sparks {post.likes}
+                          Like {post.likes}
                         </button>
                         <button
                           type="button"
@@ -2066,7 +2124,7 @@ export default function Home() {
                             ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                             : "border-[var(--line)] bg-white text-slate-600"
                         }`}
-                        aria-label={post.saved ? "Remove from vault" : "Vault moment"}
+                        aria-label={post.saved ? "Remove from vault" : "Vault post"}
                         title={post.saved ? "Vaulted" : "Vault"}
                       >
                         <SaveGlyph saved={post.saved} />
@@ -2077,8 +2135,8 @@ export default function Home() {
                 {visiblePosts.length === 0 ? (
                   <p className="rounded-2xl border border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
                     {contentView === "reels"
-                      ? "No cuts yet."
-                      : "No moments yet."}
+                      ? "No reels yet."
+                      : "No posts yet."}
                   </p>
                 ) : null}
               </div>
@@ -2242,7 +2300,8 @@ export default function Home() {
             </section>
           </aside>
         </div>
-      </main>
+        </main>
+      </div>
       {chatOpen ? (
         <section className="chat-panel motion-surface p-3">
           <div className="mb-3 flex items-center justify-between gap-3">

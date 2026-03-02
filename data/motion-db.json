@@ -113,6 +113,18 @@
       "userId": "usr_demo",
       "createdAt": "2026-03-02T03:13:18.429Z",
       "expiresAt": "2026-04-01T03:13:18.429Z"
+    },
+    {
+      "id": "ses_6a24c2eecfce497c9434322898800d4e",
+      "userId": "usr_demo",
+      "createdAt": "2026-03-02T04:53:09.600Z",
+      "expiresAt": "2026-04-01T04:53:09.600Z"
+    },
+    {
+      "id": "ses_b03a9250014b4afabd3da5d347c6ab8a",
+      "userId": "usr_demo",
+      "createdAt": "2026-03-02T06:29:00.934Z",
+      "expiresAt": "2026-04-01T06:29:00.934Z"
     }
   ],
   "posts": [
@@ -184,36 +196,6 @@
       "savedBy": []
     },
     {
-      "id": "pst_84b337b0cffb4280877ae9a75bc3076e",
-      "userId": "usr_demo",
-      "scope": "following",
-      "kind": "Photo",
-      "caption": "iuiuioiiiii",
-      "location": "Motion WebApp",
-      "gradient": "linear-gradient(145deg, #f6d365, #fda085)",
-      "likedBy": [],
-      "commentCount": 0,
-      "createdAt": "2026-02-27T18:19:15.423Z",
-      "savedBy": []
-    },
-    {
-      "id": "pst_045f2111a71e4a1abcb464e0294a7a26",
-      "userId": "usr_demo",
-      "scope": "following",
-      "kind": "Photo",
-      "caption": "Yo, welcome home my gee",
-      "location": "Motion",
-      "gradient": "linear-gradient(145deg, #96fbc4, #f9f586)",
-      "mediaUrl": "/uploads/upl_340b6ad26b7d41179b9fb031a328b134.png",
-      "mediaType": "image",
-      "likedBy": [
-        "usr_demo"
-      ],
-      "commentCount": 0,
-      "createdAt": "2026-02-27T18:42:19.197Z",
-      "savedBy": []
-    },
-    {
       "id": "pst_406a130fd60d4a62999d6a8684ccc55b",
       "userId": "usr_demo",
       "scope": "following",
@@ -231,23 +213,6 @@
       "savedBy": [
         "usr_demo"
       ]
-    },
-    {
-      "id": "pst_f0289dbde66e418cae87f907d37f69b5",
-      "userId": "usr_demo",
-      "scope": "following",
-      "kind": "Reel",
-      "caption": "Excellent download",
-      "location": "",
-      "gradient": "linear-gradient(145deg, #fbc2eb, #a6c1ee)",
-      "mediaUrl": "/uploads/upl_444f6aa99054419ea8dbea10eb8d3383.mp4",
-      "mediaType": "video",
-      "likedBy": [
-        "usr_demo"
-      ],
-      "savedBy": [],
-      "commentCount": 0,
-      "createdAt": "2026-03-01T18:13:32.002Z"
     }
   ],
   "comments": [
@@ -295,6 +260,19 @@
       "gradient": "linear-gradient(135deg, #ffc048, #ff6b6b)",
       "createdAt": "2026-03-01T07:52:44.108Z",
       "expiresAt": "2026-03-02T07:52:44.108Z",
+      "seenBy": [
+        "usr_demo"
+      ]
+    },
+    {
+      "id": "sty_3ca0c2491e804b12b5e8e2b25a0e4b61",
+      "userId": "usr_demo",
+      "caption": "yttrtyrtyrytrtyrtyrytrutyr",
+      "gradient": "linear-gradient(135deg, #00a3a3, #00b1ff)",
+      "mediaUrl": "/uploads/upl_57c86fdb950b40939af03c59ea0e0474.png",
+      "mediaType": "image",
+      "createdAt": "2026-03-02T05:13:19.547Z",
+      "expiresAt": "2026-03-03T05:13:19.547Z",
       "seenBy": [
         "usr_demo"
       ]

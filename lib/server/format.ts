@@ -98,6 +98,7 @@ export function mapPostToDto({
 
   return {
     id: post.id,
+    userId: post.userId,
     author: author?.name ?? "Unknown Creator",
     handle: author ? `@${author.handle}` : "@unknown",
     scope: post.scope,

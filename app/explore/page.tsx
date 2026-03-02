@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 
 type MediaType = "image" | "video";
 type ExploreFilter = "all" | "photos" | "reels";
+type ViewportMode = "desktop" | "tablet" | "mobile";
 
 type User = {
   id: string;
@@ -62,6 +63,71 @@ async function apiGet<T>(url: string): Promise<T> {
 function sortByNewest<T extends { createdAt: string }>(items: T[]): T[] {
   return [...items].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
+function ViewportPicker({
+  mode,
+  onChange,
+}: {
+  mode: ViewportMode;
+  onChange: (next: ViewportMode) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const label = mode === "desktop" ? "Desktop" : mode === "tablet" ? "Tablet" : "Mobile";
+
+  return (
+    <div className="viewport-picker">
+      <button
+        type="button"
+        className="theme-trigger-button"
+        onClick={() => setOpen((current) => !current)}
+        aria-label="Switch viewport size"
+        aria-expanded={open}
+        title={`Viewport: ${label}`}
+      >
+        <svg
+          viewBox="0 0 20 20"
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="2.6" y="4" width="14.8" height="9.4" rx="1.6" />
+          <path d="M7.5 16h5" />
+          <path d="M9 13.4v2.6" />
+        </svg>
+      </button>
+      {open ? (
+        <div className="theme-menu motion-surface p-2">
+          <div className="space-y-1">
+            {[
+              { id: "desktop" as const, label: "Desktop" },
+              { id: "tablet" as const, label: "Tablet" },
+              { id: "mobile" as const, label: "Mobile" },
+            ].map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => {
+                  onChange(option.id);
+                  setOpen(false);
+                }}
+                className={`w-full rounded-lg border px-3 py-2 text-left text-xs font-semibold ${
+                  mode === option.id
+                    ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                    : "border-[var(--line)] bg-white text-slate-700"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -169,6 +235,18 @@ export default function ExplorePage() {
   const [filter, setFilter] = useState<ExploreFilter>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewportMode, setViewportMode] = useState<ViewportMode>("desktop");
+
+  useEffect(() => {
+    const storedViewport = window.localStorage.getItem("motion-viewport");
+    if (storedViewport === "desktop" || storedViewport === "tablet" || storedViewport === "mobile") {
+      setViewportMode(storedViewport);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("motion-viewport", viewportMode);
+  }, [viewportMode]);
 
   useEffect(() => {
     const load = async () => {
@@ -263,8 +341,8 @@ export default function ExplorePage() {
   }
 
   return (
-    <main className="motion-shell min-h-screen px-4 py-6">
-      <div className="mx-auto max-w-6xl">
+    <main className="motion-shell min-h-screen px-4 py-6" data-viewport={viewportMode}>
+      <div className="motion-viewport">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/"
@@ -273,6 +351,7 @@ export default function ExplorePage() {
             Back to Flow
           </Link>
           <div className="flex items-center gap-3">
+            <ViewportPicker mode={viewportMode} onChange={setViewportMode} />
             {user ? (
               <button
                 type="button"

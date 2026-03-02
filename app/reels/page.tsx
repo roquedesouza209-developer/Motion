@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type MediaType = "image" | "video";
+type ViewportMode = "desktop" | "tablet" | "mobile";
 
 type ReelPost = {
   id: string;
@@ -27,6 +28,71 @@ type ReelPost = {
 type ReelResponse = {
   posts: ReelPost[];
 };
+
+function ViewportPicker({
+  mode,
+  onChange,
+}: {
+  mode: ViewportMode;
+  onChange: (next: ViewportMode) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const label = mode === "desktop" ? "Desktop" : mode === "tablet" ? "Tablet" : "Mobile";
+
+  return (
+    <div className="viewport-picker">
+      <button
+        type="button"
+        className="theme-trigger-button"
+        onClick={() => setOpen((current) => !current)}
+        aria-label="Switch viewport size"
+        aria-expanded={open}
+        title={`Viewport: ${label}`}
+      >
+        <svg
+          viewBox="0 0 20 20"
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="2.6" y="4" width="14.8" height="9.4" rx="1.6" />
+          <path d="M7.5 16h5" />
+          <path d="M9 13.4v2.6" />
+        </svg>
+      </button>
+      {open ? (
+        <div className="theme-menu motion-surface p-2">
+          <div className="space-y-1">
+            {[
+              { id: "desktop" as const, label: "Desktop" },
+              { id: "tablet" as const, label: "Tablet" },
+              { id: "mobile" as const, label: "Mobile" },
+            ].map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => {
+                  onChange(option.id);
+                  setOpen(false);
+                }}
+                className={`w-full rounded-lg border px-3 py-2 text-left text-xs font-semibold ${
+                  mode === option.id
+                    ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                    : "border-[var(--line)] bg-white text-slate-700"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function sortByNewest<T extends { createdAt: string }>(items: T[]): T[] {
   return [...items].sort(
@@ -215,6 +281,18 @@ export default function ReelsPage() {
   const [reels, setReels] = useState<ReelPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewportMode, setViewportMode] = useState<ViewportMode>("desktop");
+
+  useEffect(() => {
+    const storedViewport = window.localStorage.getItem("motion-viewport");
+    if (storedViewport === "desktop" || storedViewport === "tablet" || storedViewport === "mobile") {
+      setViewportMode(storedViewport);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("motion-viewport", viewportMode);
+  }, [viewportMode]);
 
   useEffect(() => {
     const load = async () => {
@@ -312,22 +390,32 @@ export default function ReelsPage() {
   }
 
   return (
-    <main className="relative h-screen overflow-hidden bg-black">
-      <Link
-        href="/"
-        className="fixed left-4 top-4 z-20 rounded-full border border-white/15 bg-black/35 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md"
-      >
-        Back to Flow
-      </Link>
-      {!hasVideoReel ? (
-        <div className="fixed right-4 top-4 z-20 rounded-full border border-white/15 bg-black/35 px-4 py-2 text-[11px] font-medium text-white/80 backdrop-blur-md">
-          Upload cuts with video for autoplay
+    <main
+      className="motion-shell is-solid relative h-screen overflow-hidden bg-black"
+      data-viewport={viewportMode}
+    >
+      <div className="motion-viewport h-full">
+        <div className="relative h-full">
+          <Link
+            href="/"
+            className="absolute left-4 top-4 z-20 rounded-full border border-white/15 bg-black/35 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md"
+          >
+            Back to Flow
+          </Link>
+          <div className="absolute right-4 top-4 z-20 flex flex-col items-end gap-2">
+            <ViewportPicker mode={viewportMode} onChange={setViewportMode} />
+            {!hasVideoReel ? (
+              <div className="rounded-full border border-white/15 bg-black/35 px-4 py-2 text-[11px] font-medium text-white/80 backdrop-blur-md">
+                Upload cuts with video for autoplay
+              </div>
+            ) : null}
+          </div>
+          <div className="h-full snap-y snap-mandatory overflow-y-auto">
+            {reels.map((reel) => (
+              <ReelCard key={reel.id} reel={reel} onSaveToggle={toggleSave} />
+            ))}
+          </div>
         </div>
-      ) : null}
-      <div className="h-screen snap-y snap-mandatory overflow-y-auto">
-        {reels.map((reel) => (
-          <ReelCard key={reel.id} reel={reel} onSaveToggle={toggleSave} />
-        ))}
       </div>
     </main>
   );

@@ -671,6 +671,56 @@ body {
   isolation: isolate;
 }
 
+.motion-shell.is-solid::before {
+  display: none;
+}
+
+.motion-viewport {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.motion-shell[data-viewport="tablet"] .motion-viewport {
+  max-width: 980px;
+}
+
+.motion-shell[data-viewport="mobile"] .motion-viewport {
+  max-width: 440px;
+}
+
+.motion-shell[data-viewport="tablet"] .chat-fab {
+  left: max(1.2rem, calc(50% - 980px / 2 + 1.2rem));
+}
+
+.motion-shell[data-viewport="tablet"] .support-fab {
+  right: max(1.2rem, calc(50% - 980px / 2 + 1.2rem));
+}
+
+.motion-shell[data-viewport="tablet"] .chat-panel {
+  left: max(1.2rem, calc(50% - 980px / 2 + 1.2rem));
+}
+
+.motion-shell[data-viewport="tablet"] .support-panel {
+  right: max(1.2rem, calc(50% - 980px / 2 + 1.2rem));
+}
+
+.motion-shell[data-viewport="mobile"] .chat-fab {
+  left: max(1.2rem, calc(50% - 440px / 2 + 1.2rem));
+}
+
+.motion-shell[data-viewport="mobile"] .support-fab {
+  right: max(1.2rem, calc(50% - 440px / 2 + 1.2rem));
+}
+
+.motion-shell[data-viewport="mobile"] .chat-panel {
+  left: max(1.2rem, calc(50% - 440px / 2 + 1.2rem));
+}
+
+.motion-shell[data-viewport="mobile"] .support-panel {
+  right: max(1.2rem, calc(50% - 440px / 2 + 1.2rem));
+}
+
 .motion-shell::before {
   content: "";
   position: absolute;
@@ -854,6 +904,10 @@ body {
 }
 
 .theme-picker {
+  position: relative;
+}
+
+.viewport-picker {
   position: relative;
 }
 

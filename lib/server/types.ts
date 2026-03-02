@@ -95,6 +95,7 @@ export type PublicUser = Pick<
 
 export type PostDto = {
   id: string;
+  userId: string;
   author: string;
   handle: string;
   scope: FeedScope;

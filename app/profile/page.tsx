@@ -21,6 +21,7 @@ type Post = {
   id: string;
   author: string;
   handle: string;
+  userId: string;
   kind: "Photo" | "Reel";
   caption: string;
   location: string;
@@ -81,9 +82,13 @@ function normalizeProfileTab(input: string | null): ProfileTab {
 function MediaTile({
   post,
   onToggleSave,
+  onDelete,
+  canDelete,
 }: {
   post: Post;
   onToggleSave: (postId: string) => void;
+  onDelete: (postId: string) => void;
+  canDelete: boolean;
 }) {
   return (
     <article className="group relative aspect-square overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
@@ -110,8 +115,33 @@ function MediaTile({
       <div className="absolute left-3 top-3 rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
         {post.kind === "Reel" ? "Cut" : "Moment"}
       </div>
-      <div className="absolute right-3 top-3 rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
-        <LivePostAge createdAt={post.createdAt} initialLabel={post.timeAgo} />
+      <div className="absolute right-3 top-3 flex items-center gap-2">
+        <span className="rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
+          <LivePostAge createdAt={post.createdAt} initialLabel={post.timeAgo} />
+        </span>
+        {canDelete ? (
+          <button
+            type="button"
+            onClick={() => onDelete(post.id)}
+            className="grid h-7 w-7 place-items-center rounded-full border border-white/15 bg-black/45 text-white transition hover:bg-black/60"
+            aria-label="Delete moment"
+            title="Delete"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4.5 6.3h11" />
+              <path d="M8.2 6.3V4.4h3.6v1.9" />
+              <path d="M6.4 6.3l.6 9.3h6l.6-9.3" />
+            </svg>
+          </button>
+        ) : null}
       </div>
       <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-3">
         <div className="min-w-0 text-white">
@@ -144,6 +174,7 @@ export default function ProfilePage() {
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -284,6 +315,34 @@ export default function ProfilePage() {
     }
   };
 
+  const deletePost = async (postId: string) => {
+    if (deletingId) {
+      return;
+    }
+
+    setDeletingId(postId);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/posts/${postId}`, { method: "DELETE" });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to delete moment.");
+      }
+
+      setPosts((current) => current.filter((post) => post.id !== postId));
+      setAllPosts((current) => current.filter((post) => post.id !== postId));
+      setSavedPosts((current) => current.filter((post) => post.id !== postId));
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error ? deleteError.message : "Failed to delete moment.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <main className="motion-shell min-h-screen px-4 py-8">
@@ -383,7 +442,13 @@ export default function ProfilePage() {
           {visiblePosts.length > 0 ? (
             <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
               {visiblePosts.map((post) => (
-                <MediaTile key={post.id} post={post} onToggleSave={toggleSave} />
+                <MediaTile
+                  key={post.id}
+                  post={post}
+                  onToggleSave={toggleSave}
+                  onDelete={deletePost}
+                  canDelete={post.userId === user.id && activeTab === "posts"}
+                />
               ))}
             </div>
           ) : (
