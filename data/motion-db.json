@@ -125,6 +125,18 @@
       "userId": "usr_demo",
       "createdAt": "2026-03-02T06:29:00.934Z",
       "expiresAt": "2026-04-01T06:29:00.934Z"
+    },
+    {
+      "id": "ses_7a4dcb6a9b8f4f05b5c367ec4937e770",
+      "userId": "usr_demo",
+      "createdAt": "2026-03-02T09:12:16.867Z",
+      "expiresAt": "2026-04-01T09:12:16.867Z"
+    },
+    {
+      "id": "ses_0ab93814b10e46fdb65c06d51829a306",
+      "userId": "usr_demo",
+      "createdAt": "2026-03-02T09:27:14.511Z",
+      "expiresAt": "2026-04-01T09:27:14.511Z"
     }
   ],
   "posts": [
@@ -254,17 +266,6 @@
   ],
   "stories": [
     {
-      "id": "sty_5a4808cb09334fd682b67c026f29a472",
-      "userId": "usr_demo",
-      "caption": "yuuuuuuuuuuuuuuuuuuuuuuuutyt",
-      "gradient": "linear-gradient(135deg, #ffc048, #ff6b6b)",
-      "createdAt": "2026-03-01T07:52:44.108Z",
-      "expiresAt": "2026-03-02T07:52:44.108Z",
-      "seenBy": [
-        "usr_demo"
-      ]
-    },
-    {
       "id": "sty_3ca0c2491e804b12b5e8e2b25a0e4b61",
       "userId": "usr_demo",
       "caption": "yttrtyrtyrytrtyrtyrytrutyr",
@@ -287,9 +288,9 @@
       ],
       "unreadCountByUserId": {
         "usr_demo": 0,
-        "usr_ari": 1
+        "usr_ari": 2
       },
-      "updatedAt": "2026-02-28T09:09:44.001Z"
+      "updatedAt": "2026-03-02T08:16:24.789Z"
     },
     {
       "id": "con_302",
@@ -379,6 +380,13 @@
       "senderId": "usr_demo",
       "text": "Ok, no wrrs ✌️",
       "createdAt": "2026-02-28T09:09:44.001Z"
+    },
+    {
+      "id": "msg_e1088867bfbd42b294edb2b0d1dbdbcd",
+      "conversationId": "con_301",
+      "senderId": "usr_demo",
+      "text": "Yo",
+      "createdAt": "2026-03-02T08:16:24.789Z"
     }
   ],
   "follows": [
