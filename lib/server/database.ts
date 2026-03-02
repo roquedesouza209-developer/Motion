@@ -322,7 +322,7 @@ function createSeedDatabase(): MotionDb {
       id: "msg_401",
       conversationId: "con_301",
       senderId: USER_IDS.ari,
-      text: "Your rooftop reel looked sharp.",
+      text: "Your rooftop cut looked sharp.",
       createdAt: toIsoWithMinuteOffset(-6),
     },
     {
@@ -343,7 +343,7 @@ function createSeedDatabase(): MotionDb {
       id: "msg_404",
       conversationId: "con_302",
       senderId: USER_IDS.mina,
-      text: "Story collab this weekend?",
+      text: "Move collab this weekend?",
       createdAt: toIsoWithMinuteOffset(-29),
     },
     {

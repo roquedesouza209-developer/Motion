@@ -33,7 +33,7 @@ export async function POST(request: Request, context: RouteContext) {
   });
 
   if (!updated) {
-    return NextResponse.json({ error: "Story not found." }, { status: 404 });
+    return NextResponse.json({ error: "Move not found." }, { status: 404 });
   }
 
   return NextResponse.json({ seen: true });

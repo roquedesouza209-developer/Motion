@@ -147,7 +147,7 @@ function MediaPreview({ post, className }: { post: Post; className: string }) {
       <div className={`${className} relative overflow-hidden`}>
         <Image
           src={post.mediaUrl}
-          alt={`${post.author} post`}
+          alt={`${post.author} moment`}
           fill
           className="object-cover"
         />
@@ -176,7 +176,7 @@ function StoryAvatarContent({ story }: { story: Story }) {
       <span className="story-avatar overflow-hidden" style={{ background: story.gradient }}>
         <Image
           src={story.mediaUrl}
-          alt={`${story.name} story`}
+          alt={`${story.name} move`}
           fill
           className="object-cover"
         />
@@ -646,7 +646,7 @@ export default function Home() {
     void req<{ messages: Message[] }>(`/api/messages/${activeId}`)
       .then((payload) => setMessages(payload.messages))
       .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : "Failed to load messages"),
+        setError(e instanceof Error ? e.message : "Failed to load threads"),
       );
   }, [user, activeId]);
 
@@ -720,7 +720,7 @@ export default function Home() {
         title: "Commented",
         detail: `${
           commentSource?.author ?? "Noah Kim"
-        } commented on your post.`,
+        } commented on your moment.`,
         meta: commentSource
           ? `${commentSource.comments} comments`
           : "New comment",
@@ -941,7 +941,7 @@ export default function Home() {
         ),
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Like failed");
+      setError(e instanceof Error ? e.message : "Spark failed");
       await loadData(feedView);
     }
   };
@@ -1056,7 +1056,7 @@ export default function Home() {
       });
       await loadData(feedView);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      setError(e instanceof Error ? e.message : "Vault failed");
     }
   };
 
@@ -1070,7 +1070,7 @@ export default function Home() {
     try {
       await req<{ seen: boolean }>(`/api/stories/${storyId}/seen`, { method: "POST" });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to mark story");
+      setError(e instanceof Error ? e.message : "Failed to mark move");
     }
   };
 
@@ -1090,7 +1090,7 @@ export default function Home() {
       setText("");
       await loadData(feedView);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Message failed");
+      setError(e instanceof Error ? e.message : "Thread failed");
     }
   };
 
@@ -1132,7 +1132,7 @@ export default function Home() {
     }
 
     if (composerMode === "story" && !composerCaption.trim() && !composerFile) {
-      setError("Add a story caption or upload a photo/video.");
+      setError("Add a move caption or upload a photo/video.");
       return;
     }
 
@@ -1194,7 +1194,7 @@ export default function Home() {
     event.preventDefault();
 
     if (!storyCaption.trim() && !storyFile) {
-      setError("Upload a photo/video or add a story caption.");
+      setError("Upload a photo/video or add a move caption.");
       return;
     }
 
@@ -1217,7 +1217,7 @@ export default function Home() {
       setStoryComposerOpen(false);
       await loadData(feedView);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Story publish failed");
+      setError(e instanceof Error ? e.message : "Move publish failed");
     } finally {
       setPublishing(false);
     }
@@ -1430,9 +1430,9 @@ export default function Home() {
               <form className="mt-4 space-y-4" onSubmit={publish}>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {[
-                    { id: "post" as const, label: "Post" },
-                    { id: "reel" as const, label: "Reel" },
-                    { id: "story" as const, label: "Story" },
+                    { id: "post" as const, label: "Moment" },
+                    { id: "reel" as const, label: "Cut" },
+                    { id: "story" as const, label: "Move" },
                   ].map((option) => (
                     <button
                       key={option.id}
@@ -1459,7 +1459,7 @@ export default function Home() {
                   className="min-h-32 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-sm"
                   placeholder={
                     composerMode === "story"
-                      ? "Add a story caption (optional)..."
+                      ? "Add a move caption (optional)..."
                       : "What&apos;s on your mind?"
                   }
                 />
@@ -1481,7 +1481,7 @@ export default function Home() {
                               : "border-[var(--line)] bg-white text-slate-700"
                           }`}
                         >
-                          {kind === "Photo" ? "Photo Story" : "Reel Story"}
+                          {kind === "Photo" ? "Photo Move" : "Cut Move"}
                         </button>
                       ))}
                     </div>
@@ -1502,7 +1502,7 @@ export default function Home() {
                       />
                     </div>
                     <p className="mt-3 text-xs text-slate-500">
-                      Stories disappear after 24 hours.
+                      Moves are temporary. They disappear after 24 hours.
                     </p>
                     <div
                       className="mt-3 rounded-2xl px-4 py-5 text-sm font-medium text-white"
@@ -1510,7 +1510,7 @@ export default function Home() {
                     >
                       {composerFile
                         ? composerFile.name
-                        : composerCaption.trim() || "Upload a photo or reel for your story."}
+                        : composerCaption.trim() || "Upload a photo or cut for your move."}
                     </div>
                   </div>
                 ) : (
@@ -1518,7 +1518,7 @@ export default function Home() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">
-                          Add {composerMode === "post" ? "Photo" : "Reel"}
+                          Add {composerMode === "post" ? "Photo" : "Cut"}
                         </p>
                         <p className="text-xs text-slate-500">
                           {composerFile ? composerFile.name : "Choose a file to upload"}
@@ -1562,10 +1562,10 @@ export default function Home() {
                     {publishing
                       ? "Publishing..."
                       : composerMode === "story"
-                        ? "Story"
+                        ? "Move"
                         : composerMode === "reel"
-                          ? "Reel"
-                          : "Post"}
+                          ? "Cut"
+                          : "Moment"}
                   </button>
                 </div>
               </form>
@@ -1589,7 +1589,7 @@ export default function Home() {
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
-              aria-label="Create story"
+              aria-label="Create move"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -1597,10 +1597,10 @@ export default function Home() {
                     className="text-xl font-semibold text-slate-900"
                     style={{ fontFamily: "var(--font-heading)" }}
                   >
-                    Your Story
+                    Your Move
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    This is a dedicated story composer.
+                    This is a dedicated move composer.
                   </p>
                 </div>
                 <button
@@ -1611,7 +1611,7 @@ export default function Home() {
                     setStoryKind("Photo");
                   }}
                   className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
-                  aria-label="Close story composer"
+                  aria-label="Close move composer"
                   disabled={publishing}
                 >
                   x
@@ -1624,7 +1624,7 @@ export default function Home() {
                   value={storyCaption}
                   onChange={(e) => setStoryCaption(e.target.value)}
                   className="min-h-32 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-sm"
-                  placeholder="Add a story caption (optional)..."
+                  placeholder="Add a move caption (optional)..."
                 />
 
                 <div className="rounded-2xl border border-[var(--line)] bg-white p-3">
@@ -1643,7 +1643,7 @@ export default function Home() {
                             : "border-[var(--line)] bg-white text-slate-700"
                         }`}
                       >
-                        {kind === "Photo" ? "Photo Story" : "Reel Story"}
+                        {kind === "Photo" ? "Photo Move" : "Cut Move"}
                       </button>
                     ))}
                   </div>
@@ -1663,9 +1663,9 @@ export default function Home() {
                       className="max-w-full text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-xs file:font-semibold"
                     />
                   </div>
-                  <p className="mt-3 text-sm font-semibold text-slate-900">Story Preview</p>
+                  <p className="mt-3 text-sm font-semibold text-slate-900">Move Preview</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    Quick, temporary, and separate from the main feed.
+                    Quick, temporary, and separate from the main flow.
                   </p>
                   <div
                     className="mt-3 rounded-2xl px-4 py-5 text-sm font-medium text-white"
@@ -1673,7 +1673,7 @@ export default function Home() {
                   >
                     {storyFile
                       ? storyFile.name
-                      : storyCaption.trim() || "Upload a photo or reel for your story."}
+                      : storyCaption.trim() || "Upload a photo or cut for your move."}
                   </div>
                 </div>
 
@@ -1701,7 +1701,7 @@ export default function Home() {
                     className="h-10 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white disabled:opacity-60"
                     type="submit"
                   >
-                    {publishing ? "Publishing..." : "Post Story"}
+                    {publishing ? "Publishing..." : "Move"}
                   </button>
                 </div>
               </form>
@@ -1869,8 +1869,8 @@ export default function Home() {
                 <p className="text-xs text-slate-500">@{user.handle}</p>
               </div>
             </div>
-            {["Home", "Reels", "Messages", "Explore"].map((item) => (
-              item === "Home" ? (
+            {["Flow", "Cuts", "Threads", "Radar"].map((item) => (
+              item === "Flow" ? (
                 <button
                   key={item}
                   type="button"
@@ -1880,7 +1880,7 @@ export default function Home() {
                 >
                   {item}
                 </button>
-              ) : item === "Messages" ? (
+              ) : item === "Threads" ? (
                 <button
                   key={item}
                   type="button"
@@ -1891,23 +1891,23 @@ export default function Home() {
                   {item}
                   {unread > 0 ? ` (${unread})` : ""}
                 </button>
-              ) : item === "Reels" ? (
+              ) : item === "Cuts" ? (
                 <button
                   key={item}
                   type="button"
                   onClick={() => router.push("/reels")}
                   className="nav-item mb-2 w-full text-left text-sm"
-                  aria-label="Open reels page"
+                  aria-label="Open cuts page"
                 >
                   {item}
                 </button>
-              ) : item === "Explore" ? (
+              ) : item === "Radar" ? (
                 <button
                   key={item}
                   type="button"
                   onClick={() => router.push("/explore")}
                   className="nav-item mb-2 w-full text-left text-sm"
-                  aria-label="Open explore page"
+                  aria-label="Open radar page"
                 >
                   {item}
                 </button>
@@ -1922,7 +1922,10 @@ export default function Home() {
           <section className="space-y-5">
             <section className="motion-surface p-4">
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="font-semibold">Stories</h2>
+                <div>
+                  <h2 className="font-semibold">Moves</h2>
+                  <p className="text-[11px] text-slate-500">Photo/video · 24h only</p>
+                </div>
                 <span className="text-xs text-slate-500">Disappear in 24h</span>
               </div>
               <div className="story-strip">
@@ -1937,7 +1940,7 @@ export default function Home() {
                       <span className="story-avatar-badge">+</span>
                     </span>
                   </span>
-                  <span className="text-xs font-semibold">Your Story</span>
+                  <span className="text-xs font-semibold">Your Move</span>
                   <span className="text-[11px] text-slate-500">Add now</span>
                 </button>
                 {stories.map((story) => (
@@ -1947,7 +1950,7 @@ export default function Home() {
                     onClick={() => void markSeen(story.id)}
                     className="story-button"
                     type="button"
-                    title={story.caption || `${story.name}'s story`}
+                    title={story.caption || `${story.name}'s move`}
                   >
                     <span className="story-frame">
                       <StoryAvatarContent story={story} />
@@ -1971,7 +1974,7 @@ export default function Home() {
                     onClick={() => openContentView("posts")}
                     type="button"
                   >
-                    Posts
+                    Moments
                   </button>
                   <button
                     className={`rounded-full px-3 py-1 text-sm ${
@@ -1980,11 +1983,11 @@ export default function Home() {
                     onClick={() => openContentView("reels")}
                     type="button"
                   >
-                    Reels
+                    Cuts
                   </button>
                 </div>
                 <span className="text-xs text-slate-500">
-                  {visiblePosts.length} {contentView}
+                  {visiblePosts.length} {contentView === "posts" ? "Moments" : "Cuts"}
                 </span>
               </div>
 
@@ -2006,7 +2009,7 @@ export default function Home() {
                           />
                         </span>
                         <span className="rounded-full bg-[var(--brand-soft)] px-2 py-1 text-[11px]">
-                          {post.kind}
+                          {post.kind === "Reel" ? "Cut" : "Moment"}
                         </span>
                       </div>
                     </div>
@@ -2045,7 +2048,7 @@ export default function Home() {
                           }`}
                           type="button"
                         >
-                          Like {post.likes}
+                          Sparks {post.likes}
                         </button>
                         <button
                           type="button"
@@ -2063,8 +2066,8 @@ export default function Home() {
                             ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                             : "border-[var(--line)] bg-white text-slate-600"
                         }`}
-                        aria-label={post.saved ? "Remove from saved" : "Save post"}
-                        title={post.saved ? "Saved" : "Save"}
+                        aria-label={post.saved ? "Remove from vault" : "Vault moment"}
+                        title={post.saved ? "Vaulted" : "Vault"}
                       >
                         <SaveGlyph saved={post.saved} />
                       </button>
@@ -2074,8 +2077,8 @@ export default function Home() {
                 {visiblePosts.length === 0 ? (
                   <p className="rounded-2xl border border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
                     {contentView === "reels"
-                      ? "No reels yet."
-                      : "No posts yet."}
+                      ? "No cuts yet."
+                      : "No moments yet."}
                   </p>
                 ) : null}
               </div>
@@ -2099,8 +2102,8 @@ export default function Home() {
             <section className="motion-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">Notifications</p>
-                  <p className="text-[11px] text-slate-500">Follows, likes, and comments.</p>
+                  <p className="text-sm font-semibold text-slate-900">Updates</p>
+                  <p className="text-[11px] text-slate-500">Follows, sparks, and comments.</p>
                 </div>
                 <button
                   className="relative grid h-10 w-10 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-700"
@@ -2109,9 +2112,9 @@ export default function Home() {
                     setProfileMenuOpen(false);
                     setNotificationsOpen((current) => !current);
                   }}
-                  aria-label="Notifications"
+                  aria-label="Updates"
                   aria-expanded={notificationsOpen}
-                  title="Notifications"
+                  title="Updates"
                 >
                   <svg
                     viewBox="0 0 20 20"
@@ -2227,13 +2230,13 @@ export default function Home() {
 
                   {notificationItems.length === 0 ? (
                     <p className="rounded-2xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
-                      No notifications right now.
+                      No updates right now.
                     </p>
                   ) : null}
                 </div>
               ) : (
                 <p className="mt-4 rounded-2xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
-                  Keep this closed until you need it. The feed stays central and easier to scan.
+                  Keep this closed until you need it. The flow stays central and easier to scan.
                 </p>
               )}
             </section>
@@ -2244,7 +2247,7 @@ export default function Home() {
         <section className="chat-panel motion-surface p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-slate-900">Messages</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Threads</h2>
               <div className="pulse-dot" />
             </div>
             <button
@@ -2313,7 +2316,7 @@ export default function Home() {
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   className="h-9 flex-1 rounded-lg border border-[var(--line)] bg-white px-3 text-xs"
-                  placeholder="Send a message..."
+                  placeholder="Send a thread..."
                 />
                 <button
                   className="h-9 rounded-lg bg-[var(--brand)] px-3 text-xs font-semibold text-white"
@@ -2337,9 +2340,9 @@ export default function Home() {
 
           openChat();
         }}
-        aria-label="Open messages"
+        aria-label="Open threads"
         aria-expanded={chatOpen}
-        title="Messages"
+        title="Threads"
       >
         <svg
           viewBox="0 0 20 20"

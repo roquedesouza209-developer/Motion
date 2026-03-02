@@ -37,7 +37,7 @@ type Post = {
 
 const DISCOVERY_TAGS = [
   "Street Portraits",
-  "Travel Reels",
+  "Travel Cuts",
   "Color Grading",
   "Studio Lighting",
   "Behind The Scenes",
@@ -108,7 +108,7 @@ function ExploreTile({
         {post.mediaUrl && post.mediaType === "image" ? (
           <Image
             src={post.mediaUrl}
-            alt={`${post.author} post`}
+            alt={`${post.author} moment`}
             fill
             className="object-cover transition duration-300 group-hover:scale-[1.03]"
           />
@@ -126,7 +126,7 @@ function ExploreTile({
 
         <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/0 to-black/70" />
         <div className="absolute left-3 top-3 rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
-          {post.kind}
+          {post.kind === "Reel" ? "Cut" : "Moment"}
         </div>
         <div className="absolute right-3 top-3 rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
           <LivePostAge createdAt={post.createdAt} initialLabel={post.timeAgo} />
@@ -151,8 +151,8 @@ function ExploreTile({
                 ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                 : "border-white/20 bg-black/35 text-white"
             }`}
-            aria-label={post.saved ? "Remove from saved" : "Save post"}
-            title={post.saved ? "Saved" : "Save"}
+            aria-label={post.saved ? "Remove from vault" : "Vault moment"}
+            title={post.saved ? "Vaulted" : "Vault"}
           >
             <SaveGlyph saved={post.saved} />
           </button>
@@ -189,9 +189,7 @@ export default function ExplorePage() {
         const discover = await apiGet<{ posts: Post[] }>("/api/posts?scope=discover");
         setPosts(discover.posts);
       } catch (loadError) {
-        setError(
-          loadError instanceof Error ? loadError.message : "Failed to load explore.",
-        );
+        setError(loadError instanceof Error ? loadError.message : "Failed to load radar.");
       } finally {
         setLoading(false);
       }
@@ -241,7 +239,7 @@ export default function ExplorePage() {
       };
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to save post.");
+        throw new Error(payload.error ?? "Failed to vault moment.");
       }
 
       setPosts((current) =>
@@ -250,16 +248,16 @@ export default function ExplorePage() {
         ),
       );
     } catch (toggleError) {
-      setError(
-        toggleError instanceof Error ? toggleError.message : "Failed to save post.",
-      );
+        setError(
+          toggleError instanceof Error ? toggleError.message : "Failed to vault moment.",
+        );
     }
   };
 
   if (loading) {
     return (
       <main className="motion-shell min-h-screen px-4 py-8">
-        <div className="motion-surface mx-auto max-w-6xl p-6">Loading explore...</div>
+        <div className="motion-surface mx-auto max-w-6xl p-6">Loading radar...</div>
       </main>
     );
   }
@@ -272,7 +270,7 @@ export default function ExplorePage() {
             href="/"
             className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-sm font-semibold text-slate-700"
           >
-            Back Home
+            Back to Flow
           </Link>
           <div className="flex items-center gap-3">
             {user ? (
@@ -291,7 +289,7 @@ export default function ExplorePage() {
                   .slice(0, 2)}
               </button>
             ) : null}
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Explore</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Radar</p>
           </div>
         </div>
 
@@ -299,24 +297,24 @@ export default function ExplorePage() {
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Discovery
+                Radar
               </p>
               <h1
                 className="mt-2 text-3xl font-semibold text-slate-900"
                 style={{ fontFamily: "var(--font-heading)" }}
               >
-                Fresh discovery, separate from home.
+                Fresh radar, separate from flow.
               </h1>
               <p className="mt-2 text-sm text-slate-500">
-                Explore trending posts and reels without loading down the main feed.
+                Radar trending moments and cuts without loading down the main flow.
               </p>
             </div>
 
             <div className="inline-flex rounded-full border border-[var(--line)] bg-white p-1">
               {[
                 { id: "all" as const, label: "All" },
-                { id: "photos" as const, label: "Photos" },
-                { id: "reels" as const, label: "Reels" },
+                { id: "photos" as const, label: "Moments" },
+                { id: "reels" as const, label: "Cuts" },
               ].map((option) => (
                 <button
                   key={option.id}
@@ -364,7 +362,7 @@ export default function ExplorePage() {
             </div>
           ) : (
             <div className="mt-5 rounded-2xl border border-[var(--line)] bg-white px-4 py-8 text-center text-sm text-slate-500">
-              Nothing to explore yet.
+              Nothing in radar yet.
             </div>
           )}
         </section>

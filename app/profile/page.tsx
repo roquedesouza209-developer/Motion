@@ -36,8 +36,8 @@ type Post = {
 };
 
 const PROFILE_TABS: { id: ProfileTab; label: string }[] = [
-  { id: "posts", label: "Posts" },
-  { id: "saved", label: "Saved" },
+  { id: "posts", label: "Moments" },
+  { id: "saved", label: "Vault" },
   { id: "tagged", label: "Tagged" },
 ];
 
@@ -90,7 +90,7 @@ function MediaTile({
       {post.mediaUrl && post.mediaType === "image" ? (
         <Image
           src={post.mediaUrl}
-          alt={`${post.author} post`}
+          alt={`${post.author} moment`}
           fill
           className="object-cover transition duration-300 group-hover:scale-[1.03]"
         />
@@ -108,7 +108,7 @@ function MediaTile({
 
       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/0 to-black/70" />
       <div className="absolute left-3 top-3 rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
-        {post.kind}
+        {post.kind === "Reel" ? "Cut" : "Moment"}
       </div>
       <div className="absolute right-3 top-3 rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
         <LivePostAge createdAt={post.createdAt} initialLabel={post.timeAgo} />
@@ -128,8 +128,8 @@ function MediaTile({
               ? "border-[var(--brand)] bg-[var(--brand)] text-white"
               : "border-white/20 bg-black/35 text-white"
           }`}
-          aria-label={post.saved ? "Remove from saved" : "Save post"}
-          title={post.saved ? "Saved" : "Save"}
+          aria-label={post.saved ? "Remove from vault" : "Vault moment"}
+          title={post.saved ? "Vaulted" : "Vault"}
         >
           <SaveGlyph saved={post.saved} />
         </button>
@@ -249,7 +249,7 @@ export default function ProfilePage() {
       };
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to save post.");
+        throw new Error(payload.error ?? "Failed to vault moment.");
       }
 
       const update = (items: Post[]) =>
@@ -279,7 +279,7 @@ export default function ProfilePage() {
       });
     } catch (toggleError) {
       setError(
-        toggleError instanceof Error ? toggleError.message : "Failed to save post.",
+        toggleError instanceof Error ? toggleError.message : "Failed to vault moment.",
       );
     }
   };
@@ -298,7 +298,7 @@ export default function ProfilePage() {
         <div className="motion-surface mx-auto max-w-xl p-6">
           <p className="text-sm text-slate-600">Profile not available.</p>
           <Link href="/" className="mt-4 inline-flex rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white">
-            Back Home
+            Back to Flow
           </Link>
         </div>
       </main>
@@ -313,7 +313,7 @@ export default function ProfilePage() {
             href="/"
             className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-sm font-semibold text-slate-700"
           >
-            Back
+            Back to Flow
           </Link>
           <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Profile</p>
         </div>
@@ -346,11 +346,11 @@ export default function ProfilePage() {
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-center">
                 <p className="text-lg font-semibold text-slate-900">{posts.length}</p>
-                <p className="text-xs text-slate-500">Posts</p>
+                <p className="text-xs text-slate-500">Moments</p>
               </div>
               <div className="rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-center">
                 <p className="text-lg font-semibold text-slate-900">{savedPosts.length}</p>
-                <p className="text-xs text-slate-500">Saved</p>
+                <p className="text-xs text-slate-500">Vault</p>
               </div>
               <div className="rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-center">
                 <p className="text-lg font-semibold text-slate-900">{taggedPosts.length}</p>
@@ -389,10 +389,10 @@ export default function ProfilePage() {
           ) : (
             <div className="mt-5 rounded-2xl border border-[var(--line)] bg-white px-4 py-8 text-center text-sm text-slate-500">
               {activeTab === "saved"
-                ? "No saved posts yet."
+                ? "No vault moments yet."
                 : activeTab === "tagged"
-                  ? "No tagged posts yet."
-                  : "No posts yet."}
+                  ? "No tagged moments yet."
+                  : "No moments yet."}
             </div>
           )}
         </section>

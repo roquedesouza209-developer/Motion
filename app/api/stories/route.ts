@@ -66,14 +66,14 @@ export async function POST(request: Request) {
 
   if (!caption && !mediaUrl) {
     return NextResponse.json(
-      { error: "Upload a photo/video or add a story caption." },
+      { error: "Upload a photo/video or add a move caption." },
       { status: 400 },
     );
   }
 
   if (caption && caption.length < 4 && !mediaUrl) {
     return NextResponse.json(
-      { error: "Story caption must be at least 4 characters." },
+      { error: "Move caption must be at least 4 characters." },
       { status: 400 },
     );
   }

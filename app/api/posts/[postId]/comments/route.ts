@@ -27,7 +27,7 @@ export async function GET(request: Request, context: RouteContext) {
   const post = db.posts.find((candidate) => candidate.id === postId);
 
   if (!post) {
-    return NextResponse.json({ error: "Post not found." }, { status: 404 });
+    return NextResponse.json({ error: "Moment not found." }, { status: 404 });
   }
 
   const usersById = new Map(db.users.map((candidate) => [candidate.id, candidate]));
@@ -108,7 +108,7 @@ export async function POST(request: Request, context: RouteContext) {
   });
 
   if (!result) {
-    return NextResponse.json({ error: "Post not found." }, { status: 404 });
+    return NextResponse.json({ error: "Moment not found." }, { status: 404 });
   }
 
   return NextResponse.json(

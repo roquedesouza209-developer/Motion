@@ -97,7 +97,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (text.length < 1 || text.length > 500) {
     return NextResponse.json(
-      { error: "Message must be between 1 and 500 characters." },
+      { error: "Thread must be between 1 and 500 characters." },
       { status: 400 },
     );
   }
