@@ -36,7 +36,7 @@ export async function POST(request: Request, context: RouteContext) {
   });
 
   if (!result) {
-    return NextResponse.json({ error: "Moment not found." }, { status: 404 });
+    return NextResponse.json({ error: "Post not found." }, { status: 404 });
   }
 
   return NextResponse.json(result);

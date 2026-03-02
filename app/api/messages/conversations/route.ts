@@ -39,7 +39,7 @@ export async function GET(request: Request) {
         status: resolvePresence(otherUserId),
         unread: conversation.unreadCountByUserId[user.id] ?? 0,
         time: formatRelativeTime(lastMessage?.createdAt ?? conversation.updatedAt),
-        lastMessage: lastMessage?.text ?? "No threads yet.",
+        lastMessage: lastMessage?.text ?? "No messages yet.",
       };
     })
     .sort((a, b) => {

@@ -69,11 +69,11 @@ function validateFile({
   }
 
   if (expectedKind === "Photo" && mediaType !== "image") {
-    throw new Error("Photo moments require an image file.");
+    throw new Error("Photo posts require an image file.");
   }
 
   if (expectedKind === "Reel" && mediaType !== "video") {
-    throw new Error("Cuts require a video file.");
+    throw new Error("Reel posts require a video file.");
   }
 
   return { mediaType };

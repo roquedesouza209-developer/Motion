@@ -175,7 +175,7 @@ function createSeedDatabase(): MotionDb {
     seedUser({
       id: USER_IDS.sora,
       name: "Sora Miles",
-      handle: "sora.cut",
+      handle: "sora.reel",
       role: "Editor",
       email: "sora@motion.app",
       avatarGradient: "linear-gradient(135deg, #fbc2eb, #a6c1ee)",
@@ -322,7 +322,7 @@ function createSeedDatabase(): MotionDb {
       id: "msg_401",
       conversationId: "con_301",
       senderId: USER_IDS.ari,
-      text: "Your rooftop cut looked sharp.",
+      text: "Your rooftop reel looked sharp.",
       createdAt: toIsoWithMinuteOffset(-6),
     },
     {

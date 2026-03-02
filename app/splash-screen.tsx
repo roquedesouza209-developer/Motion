@@ -122,7 +122,7 @@ export default function SplashScreen({
               <p className="motion-splash-kicker">Motion</p>
               <h1 className="motion-splash-title">Capture. Share. Discover.</h1>
               <p className="motion-splash-text">
-                Loading your flow, cuts, moves, and threads.
+                Loading your feed, reels, moves, and messages.
               </p>
             </div>
             <div className="motion-splash-bar">

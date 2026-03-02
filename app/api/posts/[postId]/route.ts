@@ -38,7 +38,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   });
 
   if (result.type === "missing") {
-    return NextResponse.json({ error: "Moment not found." }, { status: 404 });
+    return NextResponse.json({ error: "Post not found." }, { status: 404 });
   }
 
   if (result.type === "forbidden") {

@@ -130,14 +130,14 @@ export async function POST(request: Request) {
 
   if (kind === "Photo" && mediaType === "video") {
     return NextResponse.json(
-      { error: "Photo moments cannot reference video media." },
+      { error: "Photo posts cannot reference video media." },
       { status: 400 },
     );
   }
 
   if (kind === "Reel" && mediaType === "image") {
     return NextResponse.json(
-      { error: "Cuts cannot reference image media." },
+      { error: "Reel posts cannot reference image media." },
       { status: 400 },
     );
   }

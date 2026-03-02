@@ -107,7 +107,7 @@ async function loadScope(scope: "following" | "discover"): Promise<ReelPost[]> {
   };
 
   if (!response.ok) {
-    throw new Error(payload.error ?? "Failed to load cuts.");
+    throw new Error(payload.error ?? "Failed to load reels.");
   }
 
   return payload.posts ?? [];
@@ -201,7 +201,7 @@ function ReelCard({
         type="button"
         onClick={togglePlayback}
         className="relative block h-full w-full text-left"
-        aria-label={paused ? "Play cut" : "Pause cut"}
+        aria-label={paused ? "Play reel" : "Pause reel"}
       >
         {reel.mediaUrl && reel.mediaType === "video" ? (
           <video
@@ -221,7 +221,7 @@ function ReelCard({
           >
             <div className="w-full bg-black/20 px-6 py-10 backdrop-blur-[2px]">
               <p className="max-w-md text-sm text-white/90">
-                  Upload a video cut to get autoplay here.
+                  Upload a video reel to get autoplay here.
               </p>
             </div>
           </div>
@@ -231,7 +231,7 @@ function ReelCard({
 
         <div className="pointer-events-none absolute left-5 top-5 flex items-center gap-2 rounded-full bg-black/35 px-3 py-1 text-xs font-medium backdrop-blur-md">
           <span className="h-2 w-2 rounded-full bg-emerald-400" />
-          Cuts
+          Reels
         </div>
 
         <div className="pointer-events-none absolute right-5 top-5 rounded-full bg-black/35 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-md">
@@ -245,7 +245,7 @@ function ReelCard({
             </p>
             <p className="text-sm text-white/90">{reel.caption}</p>
             <div className="flex items-center gap-3 text-xs text-white/70">
-              <span>{reel.likes} sparks</span>
+              <span>{reel.likes} likes</span>
               <span>{reel.comments} comments</span>
               {reel.location ? <span>{reel.location}</span> : null}
             </div>
@@ -268,7 +268,7 @@ function ReelCard({
             ? "border-red-400/50 bg-red-500 text-white"
             : "border-white/20 bg-black/35 text-white"
         }`}
-        aria-label={reel.saved ? "Remove from vault" : "Vault cut"}
+        aria-label={reel.saved ? "Remove from vault" : "Vault reel"}
         title={reel.saved ? "Vaulted" : "Vault"}
       >
         <SaveGlyph saved={reel.saved} />
@@ -315,7 +315,7 @@ export default function ReelsPage() {
 
         setReels(sortByNewest([...unique.values()]));
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Failed to load cuts.");
+        setError(loadError instanceof Error ? loadError.message : "Failed to load reels.");
       } finally {
         setLoading(false);
       }
@@ -335,7 +335,7 @@ export default function ReelsPage() {
       };
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to vault cut.");
+        throw new Error(payload.error ?? "Failed to vault reel.");
       }
 
       setReels((current) =>
@@ -345,7 +345,7 @@ export default function ReelsPage() {
       );
     } catch (toggleError) {
       setError(
-        toggleError instanceof Error ? toggleError.message : "Failed to vault cut.",
+        toggleError instanceof Error ? toggleError.message : "Failed to vault reel.",
       );
     }
   };
@@ -358,7 +358,7 @@ export default function ReelsPage() {
   if (loading) {
     return (
     <main className="grid min-h-screen place-items-center bg-black px-6 text-sm text-white/80">
-      Loading cuts...
+      Loading reels...
     </main>
     );
   }
@@ -369,7 +369,7 @@ export default function ReelsPage() {
         <div className="space-y-3">
           <p>{error}</p>
           <Link href="/" className="inline-flex rounded-full border border-white/20 px-4 py-2 text-white">
-            Back to Flow
+            Back to Feed
           </Link>
         </div>
       </main>
@@ -380,9 +380,9 @@ export default function ReelsPage() {
     return (
       <main className="grid min-h-screen place-items-center bg-black px-6 text-center text-sm text-white/80">
         <div className="space-y-3">
-          <p>No cuts available yet.</p>
+          <p>No reels available yet.</p>
           <Link href="/" className="inline-flex rounded-full border border-white/20 px-4 py-2 text-white">
-            Back to Flow
+            Back to Feed
           </Link>
         </div>
       </main>
@@ -400,13 +400,13 @@ export default function ReelsPage() {
             href="/"
             className="absolute left-4 top-4 z-20 rounded-full border border-white/15 bg-black/35 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md"
           >
-            Back to Flow
+            Back to Feed
           </Link>
           <div className="absolute right-4 top-4 z-20 flex flex-col items-end gap-2">
             <ViewportPicker mode={viewportMode} onChange={setViewportMode} />
             {!hasVideoReel ? (
               <div className="rounded-full border border-white/15 bg-black/35 px-4 py-2 text-[11px] font-medium text-white/80 backdrop-blur-md">
-                Upload cuts with video for autoplay
+                Upload reels with video for autoplay
               </div>
             ) : null}
           </div>

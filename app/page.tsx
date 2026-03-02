@@ -148,7 +148,7 @@ function MediaPreview({ post, className }: { post: Post; className: string }) {
       <div className={`${className} relative overflow-hidden`}>
         <Image
           src={post.mediaUrl}
-          alt={`${post.author} moment`}
+          alt={`${post.author} post`}
           fill
           className="object-cover"
         />
@@ -722,7 +722,7 @@ export default function Home() {
     void req<{ messages: Message[] }>(`/api/messages/${activeId}`)
       .then((payload) => setMessages(payload.messages))
       .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : "Failed to load threads"),
+        setError(e instanceof Error ? e.message : "Failed to load messages"),
       );
   }, [user, activeId]);
 
@@ -1017,7 +1017,7 @@ export default function Home() {
         ),
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Spark failed");
+      setError(e instanceof Error ? e.message : "Like failed");
       await loadData(feedView);
     }
   };
@@ -1166,7 +1166,7 @@ export default function Home() {
       setText("");
       await loadData(feedView);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Thread failed");
+      setError(e instanceof Error ? e.message : "Message failed");
     }
   };
 
@@ -1488,8 +1488,8 @@ export default function Home() {
               <form className="mt-4 space-y-4" onSubmit={publish}>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {[
-                    { id: "post" as const, label: "Moment" },
-                    { id: "reel" as const, label: "Cut" },
+                    { id: "post" as const, label: "Post" },
+                    { id: "reel" as const, label: "Reel" },
                     { id: "story" as const, label: "Move" },
                   ].map((option) => (
                     <button
@@ -1539,7 +1539,7 @@ export default function Home() {
                               : "border-[var(--line)] bg-white text-slate-700"
                           }`}
                         >
-                          {kind === "Photo" ? "Photo Move" : "Cut Move"}
+                          {kind === "Photo" ? "Photo Move" : "Reel Move"}
                         </button>
                       ))}
                     </div>
@@ -1568,7 +1568,7 @@ export default function Home() {
                     >
                       {composerFile
                         ? composerFile.name
-                        : composerCaption.trim() || "Upload a photo or cut for your move."}
+                        : composerCaption.trim() || "Upload a photo or reel for your move."}
                     </div>
                   </div>
                 ) : (
@@ -1576,7 +1576,7 @@ export default function Home() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">
-                          Add {composerMode === "post" ? "Photo" : "Cut"}
+                          Add {composerMode === "post" ? "Photo" : "Reel"}
                         </p>
                         <p className="text-xs text-slate-500">
                           {composerFile ? composerFile.name : "Choose a file to upload"}
@@ -1622,8 +1622,8 @@ export default function Home() {
                       : composerMode === "story"
                         ? "Move"
                         : composerMode === "reel"
-                          ? "Cut"
-                          : "Moment"}
+                          ? "Reel"
+                          : "Post"}
                   </button>
                 </div>
               </form>
@@ -1701,7 +1701,7 @@ export default function Home() {
                             : "border-[var(--line)] bg-white text-slate-700"
                         }`}
                       >
-                        {kind === "Photo" ? "Photo Move" : "Cut Move"}
+                        {kind === "Photo" ? "Photo Move" : "Reel Move"}
                       </button>
                     ))}
                   </div>
@@ -1723,7 +1723,7 @@ export default function Home() {
                   </div>
                   <p className="mt-3 text-sm font-semibold text-slate-900">Move Preview</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    Quick, temporary, and separate from the main flow.
+                    Quick, temporary, and separate from the main feed.
                   </p>
                   <div
                     className="mt-3 rounded-2xl px-4 py-5 text-sm font-medium text-white"
@@ -1731,7 +1731,7 @@ export default function Home() {
                   >
                     {storyFile
                       ? storyFile.name
-                      : storyCaption.trim() || "Upload a photo or cut for your move."}
+                      : storyCaption.trim() || "Upload a photo or reel for your move."}
                   </div>
                 </div>
 
@@ -2160,8 +2160,8 @@ export default function Home() {
             <section className="motion-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">Updates</p>
-                  <p className="text-[11px] text-slate-500">Follows, sparks, and comments.</p>
+                  <p className="text-sm font-semibold text-slate-900">Notifications</p>
+                  <p className="text-[11px] text-slate-500">Follows, likes, and comments.</p>
                 </div>
                 <button
                   className="relative grid h-10 w-10 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-700"
@@ -2170,9 +2170,9 @@ export default function Home() {
                     setProfileMenuOpen(false);
                     setNotificationsOpen((current) => !current);
                   }}
-                  aria-label="Updates"
+                  aria-label="Notifications"
                   aria-expanded={notificationsOpen}
-                  title="Updates"
+                  title="Notifications"
                 >
                   <svg
                     viewBox="0 0 20 20"
@@ -2288,13 +2288,13 @@ export default function Home() {
 
                   {notificationItems.length === 0 ? (
                     <p className="rounded-2xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
-                      No updates right now.
+                      No notifications right now.
                     </p>
                   ) : null}
                 </div>
               ) : (
                 <p className="mt-4 rounded-2xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
-                  Keep this closed until you need it. The flow stays central and easier to scan.
+                  Keep this closed until you need it. The feed stays central and easier to scan.
                 </p>
               )}
             </section>
@@ -2306,7 +2306,7 @@ export default function Home() {
         <section className="chat-panel motion-surface p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-slate-900">Threads</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Messages</h2>
               <div className="pulse-dot" />
             </div>
             <button
@@ -2375,7 +2375,7 @@ export default function Home() {
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   className="h-9 flex-1 rounded-lg border border-[var(--line)] bg-white px-3 text-xs"
-                  placeholder="Send a thread..."
+                  placeholder="Send a message..."
                 />
                 <button
                   className="h-9 rounded-lg bg-[var(--brand)] px-3 text-xs font-semibold text-white"
@@ -2399,9 +2399,9 @@ export default function Home() {
 
           openChat();
         }}
-        aria-label="Open threads"
+        aria-label="Open messages"
         aria-expanded={chatOpen}
-        title="Threads"
+        title="Messages"
       >
         <svg
           viewBox="0 0 20 20"
