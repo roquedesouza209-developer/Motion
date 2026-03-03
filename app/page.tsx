@@ -1909,8 +1909,8 @@ export default function Home() {
           </p>
         ) : null}
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)_280px]">
-          <aside className="motion-surface self-start p-4">
+        <div className="motion-layout-grid mt-5 grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)_280px]">
+          <aside className="motion-surface motion-sidebar self-start p-4">
             <div className="mb-4 flex items-center gap-3">
               <div
                 className="grid h-11 w-11 place-items-center rounded-full text-xs font-bold text-white"
@@ -1977,7 +1977,7 @@ export default function Home() {
             ))}
           </aside>
 
-          <section className="space-y-5">
+          <section className="motion-main space-y-5">
             <section className="motion-surface p-4">
               <div className="mb-2 flex items-center justify-between">
                 <div>
@@ -2143,7 +2143,10 @@ export default function Home() {
             </section>
           </section>
 
-          <aside ref={headerActionsRef} className="space-y-5 self-start xl:sticky xl:top-6">
+          <aside
+            ref={headerActionsRef}
+            className="motion-right-rail space-y-5 self-start xl:sticky xl:top-6"
+          >
             <section className="motion-surface p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>

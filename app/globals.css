@@ -689,6 +689,16 @@ body {
   max-width: 440px;
 }
 
+.motion-shell[data-viewport="mobile"] .motion-layout-grid,
+.motion-shell[data-viewport="tablet"] .motion-layout-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.motion-shell[data-viewport="mobile"] .motion-right-rail,
+.motion-shell[data-viewport="tablet"] .motion-right-rail {
+  position: static;
+}
+
 .motion-shell[data-viewport="tablet"] .chat-fab {
   left: max(1.2rem, calc(50% - 980px / 2 + 1.2rem));
 }

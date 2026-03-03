@@ -231,6 +231,57 @@
       "savedBy": [
         "usr_demo"
       ]
+    },
+    {
+      "id": "pst_62aad8663b26445f82eefe39a1c64c58",
+      "userId": "usr_demo",
+      "scope": "following",
+      "kind": "Photo",
+      "caption": "The African Leadership Academy Diploma Courses",
+      "location": "",
+      "gradient": "linear-gradient(145deg, #96fbc4, #f9f586)",
+      "mediaUrl": "/uploads/upl_d2018677c9f04c96a6853d86799e1987.png",
+      "mediaType": "image",
+      "likedBy": [
+        "usr_demo"
+      ],
+      "savedBy": [],
+      "commentCount": 0,
+      "createdAt": "2026-03-03T12:51:12.848Z"
+    },
+    {
+      "id": "pst_8520fbedaf3a4b61982cdb00ca6e85e1",
+      "userId": "usr_demo",
+      "scope": "following",
+      "kind": "Reel",
+      "caption": "Get more views on YouTube",
+      "location": "",
+      "gradient": "linear-gradient(145deg, #84fab0, #8fd3f4)",
+      "mediaUrl": "/uploads/upl_bb4f93adac2946248587f3a10ddcada4.mp4",
+      "mediaType": "video",
+      "likedBy": [
+        "usr_demo"
+      ],
+      "savedBy": [],
+      "commentCount": 0,
+      "createdAt": "2026-03-03T12:51:49.607Z"
+    },
+    {
+      "id": "pst_cd7a2762243a4831af5d58f33136f4d2",
+      "userId": "usr_demo",
+      "scope": "following",
+      "kind": "Reel",
+      "caption": "How to Mod MovieBox",
+      "location": "",
+      "gradient": "linear-gradient(145deg, #fbc2eb, #a6c1ee)",
+      "mediaUrl": "/uploads/upl_c2b0d28bb4794d56844486bbf2010d9c.mp4",
+      "mediaType": "video",
+      "likedBy": [
+        "usr_demo"
+      ],
+      "savedBy": [],
+      "commentCount": 0,
+      "createdAt": "2026-03-03T12:53:34.333Z"
     }
   ],
   "comments": [
@@ -270,21 +321,7 @@
       "createdAt": "2026-03-01T07:53:26.096Z"
     }
   ],
-  "stories": [
-    {
-      "id": "sty_3ca0c2491e804b12b5e8e2b25a0e4b61",
-      "userId": "usr_demo",
-      "caption": "yttrtyrtyrytrtyrtyrytrutyr",
-      "gradient": "linear-gradient(135deg, #00a3a3, #00b1ff)",
-      "mediaUrl": "/uploads/upl_57c86fdb950b40939af03c59ea0e0474.png",
-      "mediaType": "image",
-      "createdAt": "2026-03-02T05:13:19.547Z",
-      "expiresAt": "2026-03-03T05:13:19.547Z",
-      "seenBy": [
-        "usr_demo"
-      ]
-    }
-  ],
+  "stories": [],
   "conversations": [
     {
       "id": "con_301",
