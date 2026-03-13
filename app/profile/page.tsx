@@ -36,6 +36,58 @@ type Post = {
   mediaType?: MediaType;
 };
 
+function parseStoredOrder(input: string | null): string[] {
+  if (!input) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(input) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((value): value is string => typeof value === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function syncOrder(items: Post[], order: string[]): string[] {
+  if (items.length === 0) {
+    return [];
+  }
+
+  const itemIds = new Set(items.map((item) => item.id));
+  const filtered = order.filter((id) => itemIds.has(id));
+  const missing = items.map((item) => item.id).filter((id) => !filtered.includes(id));
+  return [...missing, ...filtered];
+}
+
+function applyOrder(items: Post[], order: string[]): Post[] {
+  if (order.length === 0) {
+    return items;
+  }
+
+  const indexById = new Map(order.map((id, index) => [id, index]));
+  return [...items].sort((a, b) => {
+    const aIndex = indexById.get(a.id);
+    const bIndex = indexById.get(b.id);
+
+    if (aIndex === undefined && bIndex === undefined) {
+      return 0;
+    }
+
+    if (aIndex === undefined) {
+      return 1;
+    }
+
+    if (bIndex === undefined) {
+      return -1;
+    }
+
+    return aIndex - bIndex;
+  });
+}
+
 const PROFILE_TABS: { id: ProfileTab; label: string }[] = [
   { id: "posts", label: "Posts" },
   { id: "saved", label: "Vault" },
@@ -84,14 +136,38 @@ function MediaTile({
   onToggleSave,
   onDelete,
   canDelete,
+  draggable,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  isDragging,
+  isDropTarget,
 }: {
   post: Post;
   onToggleSave: (postId: string) => void;
   onDelete: (postId: string) => void;
   canDelete: boolean;
+  draggable: boolean;
+  onDragStart: (event: React.DragEvent<HTMLElement>) => void;
+  onDragOver: (event: React.DragEvent<HTMLElement>) => void;
+  onDrop: (event: React.DragEvent<HTMLElement>) => void;
+  onDragEnd: (event: React.DragEvent<HTMLElement>) => void;
+  isDragging: boolean;
+  isDropTarget: boolean;
 }) {
   return (
-    <article className="group relative aspect-square overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
+    <article
+      className={`group relative aspect-square overflow-hidden rounded-2xl border border-[var(--line)] bg-white ${
+        draggable ? "profile-tile-draggable" : ""
+      } ${isDragging ? "profile-tile-dragging" : ""} ${isDropTarget ? "profile-tile-drop" : ""}`}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      aria-grabbed={draggable ? isDragging : undefined}
+    >
       {post.mediaUrl && post.mediaType === "image" ? (
         <Image
           src={post.mediaUrl}
@@ -174,6 +250,9 @@ export default function ProfilePage() {
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [postOrder, setPostOrder] = useState<string[]>([]);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
   const [loading, setLoading] = useState(true);
@@ -225,9 +304,14 @@ export default function ProfilePage() {
         const ownPosts = [...deduped.values()].filter(
           (post) => post.author === currentUser.name,
         );
+        const storedOrder = parseStoredOrder(
+          window.localStorage.getItem(`motion-post-order:${currentUser.id}`),
+        );
+        const nextOrder = syncOrder(ownPosts, storedOrder);
 
         setAllPosts([...deduped.values()]);
-        setPosts(ownPosts);
+        setPostOrder(nextOrder);
+        setPosts(applyOrder(ownPosts, nextOrder));
         setSavedPosts(saved.posts);
       } catch (loadError) {
         setError(
@@ -261,12 +345,80 @@ export default function ProfilePage() {
 
   const visiblePosts =
     activeTab === "saved" ? savedPosts : activeTab === "tagged" ? taggedPosts : posts;
+  const canReorder = activeTab === "posts";
 
   const selectTab = (tab: ProfileTab) => {
     setActiveTab(tab);
     router.replace(tab === "posts" ? "/profile" : `/profile?tab=${tab}`, {
       scroll: false,
     });
+  };
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      `motion-post-order:${user.id}`,
+      JSON.stringify(postOrder),
+    );
+  }, [postOrder, user]);
+
+  const handleDragStart = (postId: string) => (event: React.DragEvent<HTMLElement>) => {
+    if (!canReorder) {
+      return;
+    }
+
+    setDraggingId(postId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", postId);
+  };
+
+  const handleDragOver = (postId: string) => (event: React.DragEvent<HTMLElement>) => {
+    if (!canReorder) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverId(postId);
+  };
+
+  const handleDrop = (postId: string) => (event: React.DragEvent<HTMLElement>) => {
+    if (!canReorder) {
+      return;
+    }
+
+    event.preventDefault();
+    const draggedId = event.dataTransfer.getData("text/plain") || draggingId;
+
+    if (!draggedId || draggedId === postId) {
+      return;
+    }
+
+    setPosts((current) => {
+      const next = [...current];
+      const fromIndex = next.findIndex((post) => post.id === draggedId);
+      const toIndex = next.findIndex((post) => post.id === postId);
+
+      if (fromIndex < 0 || toIndex < 0) {
+        return current;
+      }
+
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      setPostOrder(next.map((post) => post.id));
+      return next;
+    });
+
+    setDraggingId(null);
+    setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    setDragOverId(null);
   };
 
   const toggleSave = async (postId: string) => {
@@ -448,6 +600,13 @@ export default function ProfilePage() {
                   onToggleSave={toggleSave}
                   onDelete={deletePost}
                   canDelete={post.userId === user.id && activeTab === "posts"}
+                  draggable={canReorder}
+                  onDragStart={handleDragStart(post.id)}
+                  onDragOver={handleDragOver(post.id)}
+                  onDrop={handleDrop(post.id)}
+                  onDragEnd={handleDragEnd}
+                  isDragging={draggingId === post.id}
+                  isDropTarget={dragOverId === post.id && draggingId !== post.id}
                 />
               ))}
             </div>

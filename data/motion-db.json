@@ -149,6 +149,18 @@
       "userId": "usr_demo",
       "createdAt": "2026-03-04T13:13:01.238Z",
       "expiresAt": "2026-04-03T13:13:01.238Z"
+    },
+    {
+      "id": "ses_8c0c7670936249c7bff41ded8d7ca463",
+      "userId": "usr_demo",
+      "createdAt": "2026-03-10T09:20:58.638Z",
+      "expiresAt": "2026-04-09T09:20:58.638Z"
+    },
+    {
+      "id": "ses_567841e7549a432fab56ab63f32cd9f6",
+      "userId": "usr_demo",
+      "createdAt": "2026-03-11T15:07:56.839Z",
+      "expiresAt": "2026-04-10T15:07:56.839Z"
     }
   ],
   "posts": [
@@ -218,25 +230,6 @@
       "commentCount": 57,
       "createdAt": "2026-02-27T18:07:59.014Z",
       "savedBy": []
-    },
-    {
-      "id": "pst_406a130fd60d4a62999d6a8684ccc55b",
-      "userId": "usr_demo",
-      "scope": "following",
-      "kind": "Reel",
-      "caption": "Sharing good vibes ✌️",
-      "location": "",
-      "gradient": "linear-gradient(145deg, #84fab0, #8fd3f4)",
-      "mediaUrl": "/uploads/upl_eb161f8458b44a26988e365a20a29d45.mp4",
-      "mediaType": "video",
-      "likedBy": [
-        "usr_demo"
-      ],
-      "commentCount": 0,
-      "createdAt": "2026-02-28T08:59:38.369Z",
-      "savedBy": [
-        "usr_demo"
-      ]
     },
     {
       "id": "pst_62aad8663b26445f82eefe39a1c64c58",

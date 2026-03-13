@@ -1,6 +1,10 @@
 export type FeedScope = "following" | "discover";
 export type PostKind = "Photo" | "Reel";
 export type Presence = "Online" | "Away";
+export type MediaItem = {
+  url: string;
+  type: "image" | "video";
+};
 
 export type UserRecord = {
   id: string;
@@ -29,6 +33,7 @@ export type PostRecord = {
   caption: string;
   location: string;
   gradient: string;
+  media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
   likedBy: string[];
@@ -42,6 +47,7 @@ export type StoryRecord = {
   userId: string;
   caption: string;
   gradient: string;
+  media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
   createdAt: string;
@@ -109,6 +115,7 @@ export type PostDto = {
   gradient: string;
   createdAt: string;
   timeAgo: string;
+  media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
 };
@@ -121,6 +128,7 @@ export type StoryDto = {
   gradient: string;
   caption: string;
   seen: boolean;
+  media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
 };

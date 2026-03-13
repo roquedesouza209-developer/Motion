@@ -5,7 +5,7 @@ import { createId } from "@/lib/server/crypto";
 import { readDb, updateDb } from "@/lib/server/database";
 import { mapPostToDto } from "@/lib/server/format";
 import { rankDiscoverPosts } from "@/lib/server/ranking";
-import type { FeedScope, PostKind, PostRecord } from "@/lib/server/types";
+import type { FeedScope, MediaItem, PostKind, PostRecord } from "@/lib/server/types";
 
 type CreatePostBody = {
   kind?: PostKind;
@@ -13,6 +13,7 @@ type CreatePostBody = {
   location?: string;
   scope?: FeedScope;
   gradient?: string;
+  media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
 };
@@ -42,6 +43,43 @@ function normalizeMediaType(input: string | undefined): "image" | "video" | unde
   }
 
   return undefined;
+}
+
+function normalizeMediaItems({
+  media,
+  mediaUrl,
+  mediaType,
+}: {
+  media?: MediaItem[];
+  mediaUrl?: string;
+  mediaType?: "image" | "video";
+}): { items?: MediaItem[]; error?: string } {
+  const items: MediaItem[] = [];
+
+  if (Array.isArray(media)) {
+    for (const entry of media) {
+      if (!entry || typeof entry !== "object") {
+        return { error: "media items must include url and type." };
+      }
+      const url = (entry as MediaItem).url;
+      const type = (entry as MediaItem).type;
+
+      if (typeof url !== "string" || (type !== "image" && type !== "video")) {
+        return { error: "media items must include url and type." };
+      }
+
+      items.push({ url, type });
+    }
+  }
+
+  if (items.length === 0 && mediaUrl) {
+    if (!mediaType) {
+      return { error: "mediaType is required when mediaUrl is provided." };
+    }
+    items.push({ url: mediaUrl, type: mediaType });
+  }
+
+  return { items: items.length > 0 ? items : undefined };
 }
 
 export async function GET(request: Request) {
@@ -106,6 +144,11 @@ export async function POST(request: Request) {
   const kind = normalizeKind(body.kind);
   const mediaUrl = body.mediaUrl?.trim() || undefined;
   const mediaType = normalizeMediaType(body.mediaType);
+  const normalizedMedia = normalizeMediaItems({
+    media: body.media,
+    mediaUrl,
+    mediaType,
+  });
 
   if (caption.length < 8) {
     return NextResponse.json(
@@ -114,30 +157,29 @@ export async function POST(request: Request) {
     );
   }
 
-  if (mediaUrl && !mediaType) {
-    return NextResponse.json(
-      { error: "mediaType is required when mediaUrl is provided." },
-      { status: 400 },
-    );
+  if (normalizedMedia.error) {
+    return NextResponse.json({ error: normalizedMedia.error }, { status: 400 });
   }
 
-  if (mediaUrl && !mediaUrl.startsWith("/uploads/")) {
+  const mediaItems = normalizedMedia.items;
+
+  if (mediaItems?.some((item) => !item.url.startsWith("/uploads/"))) {
     return NextResponse.json(
       { error: "mediaUrl must point to /uploads." },
       { status: 400 },
     );
   }
 
-  if (kind === "Photo" && mediaType === "video") {
+  if (kind === "Photo" && mediaItems?.some((item) => item.type === "video")) {
     return NextResponse.json(
-      { error: "Photo posts cannot reference video media." },
+      { error: "Photo posts cannot include video media." },
       { status: 400 },
     );
   }
 
-  if (kind === "Reel" && mediaType === "image") {
+  if (kind === "Reel" && mediaItems?.some((item) => item.type === "image")) {
     return NextResponse.json(
-      { error: "Reel posts cannot reference image media." },
+      { error: "Reel posts cannot include image media." },
       { status: 400 },
     );
   }
@@ -146,6 +188,7 @@ export async function POST(request: Request) {
     const gradient =
       body.gradient ??
       DEFAULT_POST_GRADIENTS[db.posts.length % DEFAULT_POST_GRADIENTS.length];
+    const primaryMedia = mediaItems?.[0];
     const newPost: PostRecord = {
       id: createId("pst"),
       userId: user.id,
@@ -154,8 +197,9 @@ export async function POST(request: Request) {
       caption,
       location,
       gradient,
-      mediaUrl,
-      mediaType,
+      media: mediaItems,
+      mediaUrl: primaryMedia?.url,
+      mediaType: primaryMedia?.type,
       likedBy: [user.id],
       savedBy: [],
       commentCount: 0,

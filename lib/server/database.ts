@@ -400,9 +400,51 @@ function normalizeDatabase(raw: unknown): MotionDb {
   }
 
   const candidate = raw as Partial<MotionDb>;
+  const normalizeMediaList = (
+    media: unknown,
+    mediaUrl: unknown,
+    mediaType: unknown,
+  ): { media?: { url: string; type: "image" | "video" }[]; mediaUrl?: string; mediaType?: "image" | "video" } => {
+    const items: { url: string; type: "image" | "video" }[] = [];
+
+    if (Array.isArray(media)) {
+      for (const entry of media) {
+        if (!entry || typeof entry !== "object") {
+          continue;
+        }
+        const url = (entry as { url?: unknown }).url;
+        const type = (entry as { type?: unknown }).type;
+        if (
+          typeof url === "string" &&
+          (type === "image" || type === "video")
+        ) {
+          items.push({ url, type });
+        }
+      }
+    }
+
+    if (
+      items.length === 0 &&
+      typeof mediaUrl === "string" &&
+      (mediaType === "image" || mediaType === "video")
+    ) {
+      items.push({ url: mediaUrl, type: mediaType });
+    }
+
+    return {
+      media: items.length > 0 ? items : undefined,
+      mediaUrl: items[0]?.url ?? (typeof mediaUrl === "string" ? mediaUrl : undefined),
+      mediaType: items[0]?.type ?? (mediaType === "image" || mediaType === "video" ? mediaType : undefined),
+    };
+  };
   const normalizedPosts = Array.isArray(candidate.posts)
     ? (candidate.posts as Partial<PostRecord>[]).map((post) => ({
         ...(post as PostRecord),
+        ...normalizeMediaList(
+          (post as PostRecord).media,
+          post.mediaUrl,
+          post.mediaType,
+        ),
         likedBy: Array.isArray(post.likedBy) ? post.likedBy : [],
         savedBy: Array.isArray(post.savedBy) ? post.savedBy : [],
         commentCount: typeof post.commentCount === "number" ? post.commentCount : 0,
@@ -430,7 +472,17 @@ function normalizeDatabase(raw: unknown): MotionDb {
       commentCount: Math.max(post.commentCount, commentTotals.get(post.id) ?? 0),
     })),
     comments: normalizedComments,
-    stories: Array.isArray(candidate.stories) ? (candidate.stories as StoryRecord[]) : [],
+    stories: Array.isArray(candidate.stories)
+      ? (candidate.stories as Partial<StoryRecord>[]).map((story) => ({
+          ...(story as StoryRecord),
+          ...normalizeMediaList(
+            (story as StoryRecord).media,
+            story.mediaUrl,
+            story.mediaType,
+          ),
+          seenBy: Array.isArray(story.seenBy) ? story.seenBy : [],
+        }))
+      : [],
     conversations: Array.isArray(candidate.conversations)
       ? (candidate.conversations as ConversationRecord[])
       : [],

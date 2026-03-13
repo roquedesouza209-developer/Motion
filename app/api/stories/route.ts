@@ -4,11 +4,12 @@ import { getAuthUser } from "@/lib/server/auth";
 import { createId } from "@/lib/server/crypto";
 import { readDb, updateDb } from "@/lib/server/database";
 import { mapStoryToDto } from "@/lib/server/format";
-import type { StoryRecord } from "@/lib/server/types";
+import type { MediaItem, StoryRecord } from "@/lib/server/types";
 
 type CreateStoryBody = {
   caption?: string;
   gradient?: string;
+  media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
 };
@@ -63,31 +64,64 @@ export async function POST(request: Request) {
     body.mediaType === "image" || body.mediaType === "video"
       ? body.mediaType
       : undefined;
+  const mediaItems: MediaItem[] = [];
 
-  if (!caption && !mediaUrl) {
+  if (Array.isArray(body.media)) {
+    for (const entry of body.media) {
+      if (!entry || typeof entry !== "object") {
+        return NextResponse.json(
+          { error: "media items must include url and type." },
+          { status: 400 },
+        );
+      }
+      const url = (entry as MediaItem).url;
+      const type = (entry as MediaItem).type;
+      if (typeof url !== "string" || (type !== "image" && type !== "video")) {
+        return NextResponse.json(
+          { error: "media items must include url and type." },
+          { status: 400 },
+        );
+      }
+      mediaItems.push({ url, type });
+    }
+  }
+
+  if (mediaItems.length === 0 && mediaUrl) {
+    if (!mediaType) {
+      return NextResponse.json(
+        { error: "mediaType is required when mediaUrl is provided." },
+        { status: 400 },
+      );
+    }
+    mediaItems.push({ url: mediaUrl, type: mediaType });
+  }
+
+  if (!caption && mediaItems.length === 0) {
     return NextResponse.json(
       { error: "Upload a photo/video or add a move caption." },
       { status: 400 },
     );
   }
 
-  if (caption && caption.length < 4 && !mediaUrl) {
+  if (caption && caption.length < 4 && mediaItems.length === 0) {
     return NextResponse.json(
       { error: "Move caption must be at least 4 characters." },
       { status: 400 },
     );
   }
 
-  if (mediaUrl && !mediaType) {
+  if (mediaItems.some((item) => !item.url.startsWith("/uploads/"))) {
     return NextResponse.json(
-      { error: "mediaType is required when mediaUrl is provided." },
+      { error: "mediaUrl must point to /uploads." },
       { status: 400 },
     );
   }
 
-  if (mediaUrl && !mediaUrl.startsWith("/uploads/")) {
+  const hasImage = mediaItems.some((item) => item.type === "image");
+  const hasVideo = mediaItems.some((item) => item.type === "video");
+  if (hasImage && hasVideo) {
     return NextResponse.json(
-      { error: "mediaUrl must point to /uploads." },
+      { error: "Moves can only include photos or videos, not both." },
       { status: 400 },
     );
   }
@@ -97,13 +131,15 @@ export async function POST(request: Request) {
       body.gradient ??
       DEFAULT_STORY_GRADIENTS[db.stories.length % DEFAULT_STORY_GRADIENTS.length];
     const now = new Date();
+    const primaryMedia = mediaItems[0];
     const story: StoryRecord = {
       id: createId("sty"),
       userId: user.id,
       caption,
       gradient,
-      mediaUrl,
-      mediaType,
+      media: mediaItems.length > 0 ? mediaItems : undefined,
+      mediaUrl: primaryMedia?.url,
+      mediaType: primaryMedia?.type,
       createdAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
       seenBy: [user.id],

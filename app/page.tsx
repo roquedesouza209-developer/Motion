@@ -11,6 +11,10 @@ type Presence = "Online" | "Away";
 type PostKind = "Photo" | "Reel";
 type ComposerMode = "post" | "reel" | "story";
 type MediaType = "image" | "video";
+type MediaItem = {
+  url: string;
+  type: MediaType;
+};
 type ViewportMode = "desktop" | "tablet" | "mobile";
 type ThemeSelection =
   | "system"
@@ -38,6 +42,7 @@ type Story = {
   minutesLeft: number;
   gradient: string;
   seen: boolean;
+  media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: MediaType;
 };
@@ -56,6 +61,7 @@ type Post = {
   gradient: string;
   createdAt: string;
   timeAgo: string;
+  media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: MediaType;
 };
@@ -142,12 +148,102 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
+function resolveMediaItems({
+  media,
+  mediaUrl,
+  mediaType,
+}: {
+  media?: MediaItem[];
+  mediaUrl?: string;
+  mediaType?: MediaType;
+}): MediaItem[] {
+  if (Array.isArray(media) && media.length > 0) {
+    return media;
+  }
+
+  if (mediaUrl && mediaType) {
+    return [{ url: mediaUrl, type: mediaType }];
+  }
+
+  return [];
+}
+
+function MediaCarousel({ media, className }: { media: MediaItem[]; className: string }) {
+  const [index, setIndex] = useState(0);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setIndex(0);
+    if (scrollerRef.current) {
+      scrollerRef.current.scrollLeft = 0;
+    }
+  }, [media.length]);
+
+  return (
+    <div className={`${className} relative overflow-hidden`}>
+      <div
+        ref={scrollerRef}
+        className="media-carousel"
+        onScroll={(event) => {
+          const target = event.currentTarget;
+          const width = target.clientWidth || 1;
+          const nextIndex = Math.round(target.scrollLeft / width);
+          if (nextIndex !== index) {
+            setIndex(nextIndex);
+          }
+        }}
+      >
+        {media.map((item, itemIndex) => (
+          <div key={`${item.url}-${itemIndex}`} className="media-slide">
+            {item.type === "image" ? (
+              <Image
+                src={item.url}
+                alt="Post media"
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <video
+                src={item.url}
+                className="h-full w-full object-cover"
+                controls
+                muted
+                preload="metadata"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      {media.length > 1 ? (
+        <div className="media-dots">
+          {media.map((_, dotIndex) => (
+            <span
+              key={`dot-${dotIndex}`}
+              className={`media-dot ${dotIndex === index ? "is-active" : ""}`}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function MediaPreview({ post, className }: { post: Post; className: string }) {
-  if (post.mediaUrl && post.mediaType === "image") {
+  const mediaItems = resolveMediaItems({
+    media: post.media,
+    mediaUrl: post.mediaUrl,
+    mediaType: post.mediaType,
+  });
+
+  if (mediaItems.length > 1) {
+    return <MediaCarousel media={mediaItems} className={className} />;
+  }
+
+  if (mediaItems.length === 1 && mediaItems[0]?.type === "image") {
     return (
       <div className={`${className} relative overflow-hidden`}>
         <Image
-          src={post.mediaUrl}
+          src={mediaItems[0].url}
           alt={`${post.author} post`}
           fill
           className="object-cover"
@@ -156,10 +252,10 @@ function MediaPreview({ post, className }: { post: Post; className: string }) {
     );
   }
 
-  if (post.mediaUrl && post.mediaType === "video") {
+  if (mediaItems.length === 1 && mediaItems[0]?.type === "video") {
     return (
       <video
-        src={post.mediaUrl}
+        src={mediaItems[0].url}
         className={`${className} bg-black object-cover`}
         controls
         muted
@@ -172,11 +268,18 @@ function MediaPreview({ post, className }: { post: Post; className: string }) {
 }
 
 function StoryAvatarContent({ story }: { story: Story }) {
-  if (story.mediaUrl && story.mediaType === "image") {
+  const mediaItems = resolveMediaItems({
+    media: story.media,
+    mediaUrl: story.mediaUrl,
+    mediaType: story.mediaType,
+  });
+  const primary = mediaItems[0];
+
+  if (primary && primary.type === "image") {
     return (
       <span className="story-avatar overflow-hidden" style={{ background: story.gradient }}>
         <Image
-          src={story.mediaUrl}
+          src={primary.url}
           alt={`${story.name} move`}
           fill
           className="object-cover"
@@ -188,7 +291,7 @@ function StoryAvatarContent({ story }: { story: Story }) {
   return (
     <span className="story-avatar overflow-hidden" style={{ background: story.gradient }}>
       {story.name.slice(0, 2).toUpperCase()}
-      {story.mediaType === "video" ? <span className="story-video-badge">▶</span> : null}
+      {primary?.type === "video" ? <span className="story-video-badge">▶</span> : null}
     </span>
   );
 }
@@ -563,8 +666,8 @@ export default function Home() {
   const [composerMode, setComposerMode] = useState<ComposerMode>("post");
   const [composerCaption, setComposerCaption] = useState("");
   const [storyCaption, setStoryCaption] = useState("");
-  const [composerFile, setComposerFile] = useState<File | null>(null);
-  const [storyFile, setStoryFile] = useState<File | null>(null);
+  const [composerFiles, setComposerFiles] = useState<File[]>([]);
+  const [storyFiles, setStoryFiles] = useState<File[]>([]);
   const [storyKind, setStoryKind] = useState<PostKind>("Photo");
   const [publishing, setPublishing] = useState(false);
   const [themeSelection, setThemeSelection] = useState<ThemeSelection>("system");
@@ -575,6 +678,7 @@ export default function Home() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>([]);
   const [heartBurst, setHeartBurst] = useState<{ postId: string; token: number } | null>(null);
+  const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [commentEntries, setCommentEntries] = useState<CommentEntry[]>([]);
   const [commentsTotal, setCommentsTotal] = useState(0);
@@ -584,6 +688,8 @@ export default function Home() {
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const composerCaptionRef = useRef<HTMLTextAreaElement | null>(null);
   const storyCaptionRef = useRef<HTMLTextAreaElement | null>(null);
+  const composerInputRef = useRef<HTMLInputElement | null>(null);
+  const storyInputRef = useRef<HTMLInputElement | null>(null);
   const headerActionsRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const feedSectionRef = useRef<HTMLElement | null>(null);
@@ -828,6 +934,21 @@ export default function Home() {
     () => posts.find((post) => post.id === commentsPostId) ?? null,
     [commentsPostId, posts],
   );
+  const activeStory = useMemo(
+    () => stories.find((story) => story.id === activeStoryId) ?? null,
+    [activeStoryId, stories],
+  );
+  const activeStoryMedia = useMemo(
+    () =>
+      activeStory
+        ? resolveMediaItems({
+            media: activeStory.media,
+            mediaUrl: activeStory.mediaUrl,
+            mediaType: activeStory.mediaType,
+          })
+        : [],
+    [activeStory],
+  );
 
   const unread = conversations.reduce((sum, convo) => sum + convo.unread, 0);
 
@@ -888,12 +1009,13 @@ export default function Home() {
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setCommentsPostId(null);
+    setActiveStoryId(null);
     setStoryComposerOpen(false);
     setComposerMode(mode);
     if (mode === "story") {
       setStoryKind("Photo");
     }
-    setStoryFile(null);
+    setStoryFiles([]);
     setComposerOpen(true);
   };
 
@@ -903,9 +1025,10 @@ export default function Home() {
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setCommentsPostId(null);
+    setActiveStoryId(null);
     setComposerOpen(false);
     setStoryKind("Photo");
-    setStoryFile(null);
+    setStoryFiles([]);
     setStoryComposerOpen(true);
   };
 
@@ -916,6 +1039,7 @@ export default function Home() {
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setCommentsPostId(null);
+    setActiveStoryId(null);
     setActiveId((current) => current ?? conversations[0]?.id ?? null);
     setChatOpen(true);
   };
@@ -928,6 +1052,7 @@ export default function Home() {
     setProfileMenuOpen(false);
     setCommentsPostId(null);
     setChatOpen(false);
+    setActiveStoryId(null);
     setContentView(view);
     feedSectionRef.current?.scrollIntoView({
       behavior: "smooth",
@@ -943,6 +1068,7 @@ export default function Home() {
     setProfileMenuOpen(false);
     setCommentsPostId(null);
     setChatOpen(false);
+    setActiveStoryId(null);
     setContentView("posts");
     window.scrollTo({
       top: 0,
@@ -974,6 +1100,7 @@ export default function Home() {
       setNotificationsOpen(false);
       setProfileMenuOpen(false);
       setCommentsPostId(null);
+      setActiveStoryId(null);
       setUser(null);
       setStories([]);
       setPosts([]);
@@ -983,8 +1110,8 @@ export default function Home() {
       setComposerMode("post");
       setComposerCaption("");
       setStoryCaption("");
-      setComposerFile(null);
-      setStoryFile(null);
+      setComposerFiles([]);
+      setStoryFiles([]);
       setStoryKind("Photo");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign out failed");
@@ -1150,6 +1277,22 @@ export default function Home() {
     }
   };
 
+  const openStory = (storyId: string) => {
+    setError(null);
+    setComposerOpen(false);
+    setStoryComposerOpen(false);
+    setChatOpen(false);
+    setNotificationsOpen(false);
+    setProfileMenuOpen(false);
+    setCommentsPostId(null);
+    setActiveStoryId(storyId);
+    void markSeen(storyId);
+  };
+
+  const closeStory = () => {
+    setActiveStoryId(null);
+  };
+
   const send = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -1184,18 +1327,45 @@ export default function Home() {
     });
   };
 
+  const mergeFiles = (current: File[], incoming: File[]) => {
+    const seen = new Set(current.map((file) => `${file.name}-${file.size}-${file.lastModified}`));
+    const merged = [...current];
+    for (const file of incoming) {
+      const key = `${file.name}-${file.size}-${file.lastModified}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(file);
+      }
+    }
+    return merged;
+  };
+
+  const addComposerFiles = (fileList: FileList | null) => {
+    const incoming = Array.from(fileList ?? []);
+    if (incoming.length === 0) {
+      return;
+    }
+    setComposerFiles((current) => mergeFiles(current, incoming));
+  };
+
+  const addStoryFiles = (fileList: FileList | null) => {
+    const incoming = Array.from(fileList ?? []);
+    if (incoming.length === 0) {
+      return;
+    }
+    setStoryFiles((current) => mergeFiles(current, incoming));
+  };
+
   const createStory = async ({
     caption,
-    mediaUrl,
-    mediaType,
+    media,
   }: {
     caption?: string;
-    mediaUrl?: string;
-    mediaType?: MediaType;
+    media?: MediaItem[];
   }) => {
     await req<{ story: Story }>("/api/stories", {
       method: "POST",
-      body: JSON.stringify({ caption, mediaUrl, mediaType }),
+      body: JSON.stringify({ caption, media }),
     });
   };
 
@@ -1207,7 +1377,7 @@ export default function Home() {
       return;
     }
 
-    if (composerMode === "story" && !composerCaption.trim() && !composerFile) {
+    if (composerMode === "story" && !composerCaption.trim() && composerFiles.length === 0) {
       setError("Add a move caption or upload a photo/video.");
       return;
     }
@@ -1217,18 +1387,22 @@ export default function Home() {
 
     try {
       if (composerMode === "story") {
-        const uploaded = composerFile
-          ? await uploadSelectedMedia(composerFile, storyKind)
-          : null;
-
+        const media =
+          composerFiles.length > 0
+            ? (await Promise.all(
+                composerFiles.map((file) => uploadSelectedMedia(file, storyKind)),
+              )).map((uploaded) => ({
+                url: uploaded.mediaUrl,
+                type: uploaded.mediaType,
+              }))
+            : undefined;
         await createStory({
           caption: composerCaption.trim() || undefined,
-          mediaUrl: uploaded?.mediaUrl,
-          mediaType: uploaded?.mediaType,
+          media,
         });
         setComposerCaption("");
         setComposerMode("post");
-        setComposerFile(null);
+        setComposerFiles([]);
         setStoryKind("Photo");
         setComposerOpen(false);
         await loadData(feedView);
@@ -1236,12 +1410,17 @@ export default function Home() {
       }
 
       const postKind: PostKind = composerMode === "reel" ? "Reel" : "Photo";
-      let uploaded: UploadResponse | null = null;
-
-      if (composerFile) {
-        uploaded = await uploadSelectedMedia(composerFile, postKind);
-      }
-
+      const filesToUpload =
+        composerMode === "reel" ? composerFiles.slice(0, 1) : composerFiles;
+      const media =
+        filesToUpload.length > 0
+          ? (await Promise.all(
+              filesToUpload.map((file) => uploadSelectedMedia(file, postKind)),
+            )).map((uploaded) => ({
+              url: uploaded.mediaUrl,
+              type: uploaded.mediaType,
+            }))
+          : undefined;
       await req<{ post: Post }>("/api/posts", {
         method: "POST",
         body: JSON.stringify({
@@ -1249,14 +1428,13 @@ export default function Home() {
           kind: postKind,
           location: DEFAULT_POST_LOCATION,
           scope: feedView,
-          mediaUrl: uploaded?.mediaUrl,
-          mediaType: uploaded?.mediaType,
+          media,
         }),
       });
 
       setComposerCaption("");
       setComposerMode("post");
-      setComposerFile(null);
+      setComposerFiles([]);
       setComposerOpen(false);
       await loadData(feedView);
     } catch (e) {
@@ -1269,7 +1447,7 @@ export default function Home() {
   const publishStory = async (event: FormEvent) => {
     event.preventDefault();
 
-    if (!storyCaption.trim() && !storyFile) {
+    if (!storyCaption.trim() && storyFiles.length === 0) {
       setError("Upload a photo/video or add a move caption.");
       return;
     }
@@ -1278,17 +1456,21 @@ export default function Home() {
     setError(null);
 
     try {
-      const uploaded = storyFile
-        ? await uploadSelectedMedia(storyFile, storyKind)
-        : null;
-
+      const media =
+        storyFiles.length > 0
+          ? (await Promise.all(
+              storyFiles.map((file) => uploadSelectedMedia(file, storyKind)),
+            )).map((uploaded) => ({
+              url: uploaded.mediaUrl,
+              type: uploaded.mediaType,
+            }))
+          : undefined;
       await createStory({
         caption: storyCaption.trim() || undefined,
-        mediaUrl: uploaded?.mediaUrl,
-        mediaType: uploaded?.mediaType,
+        media,
       });
       setStoryCaption("");
-      setStoryFile(null);
+      setStoryFiles([]);
       setStoryKind("Photo");
       setStoryComposerOpen(false);
       await loadData(feedView);
@@ -1445,7 +1627,7 @@ export default function Home() {
               if (!publishing) {
                 setComposerOpen(false);
                 setComposerMode("post");
-                setComposerFile(null);
+                setComposerFiles([]);
                 setStoryKind("Photo");
               }
             }}
@@ -1474,7 +1656,7 @@ export default function Home() {
                   onClick={() => {
                     setComposerOpen(false);
                     setComposerMode("post");
-                    setComposerFile(null);
+                    setComposerFiles([]);
                     setStoryKind("Photo");
                   }}
                   className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
@@ -1497,7 +1679,7 @@ export default function Home() {
                       type="button"
                       onClick={() => {
                         setComposerMode(option.id);
-                        setComposerFile(null);
+                        setComposerFiles([]);
                       }}
                       className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${
                         composerMode === option.id
@@ -1531,7 +1713,7 @@ export default function Home() {
                           type="button"
                           onClick={() => {
                             setStoryKind(kind);
-                            setComposerFile(null);
+                            setComposerFiles([]);
                           }}
                           className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                             storyKind === kind
@@ -1549,15 +1731,31 @@ export default function Home() {
                           Upload {storyKind === "Photo" ? "Photo" : "Video"}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {composerFile ? composerFile.name : "Choose from your device"}
+                          {composerFiles.length > 0
+                            ? `${composerFiles.length} selected`
+                            : "Choose from your device"}
                         </p>
                       </div>
-                      <input
-                        type="file"
-                        accept={storyKind === "Photo" ? "image/*" : "video/*"}
-                        onChange={(e) => setComposerFile(e.target.files?.[0] ?? null)}
-                        className="max-w-full text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-xs file:font-semibold"
-                      />
+                        <input
+                          ref={composerInputRef}
+                          type="file"
+                          accept={storyKind === "Photo" ? "image/*" : "video/*"}
+                          multiple
+                          onChange={(e) => {
+                            addComposerFiles(e.target.files);
+                            e.target.value = "";
+                          }}
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => composerInputRef.current?.click()}
+                          className="grid h-9 w-9 place-items-center rounded-full border border-[var(--line)] bg-white text-sm font-semibold text-slate-700"
+                          aria-label="Add more media"
+                          title="Add more"
+                        >
+                          +
+                        </button>
                     </div>
                     <p className="mt-3 text-xs text-slate-500">
                       Moves are temporary. They disappear after 24 hours.
@@ -1566,8 +1764,8 @@ export default function Home() {
                       className="mt-3 rounded-2xl px-4 py-5 text-sm font-medium text-white"
                       style={{ background: user.avatarGradient }}
                     >
-                      {composerFile
-                        ? composerFile.name
+                      {composerFiles.length > 0
+                        ? `${composerFiles.length} file${composerFiles.length > 1 ? "s" : ""} selected`
                         : composerCaption.trim() || "Upload a photo or reel for your move."}
                     </div>
                   </div>
@@ -1579,15 +1777,31 @@ export default function Home() {
                           Add {composerMode === "post" ? "Photo" : "Reel"}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {composerFile ? composerFile.name : "Choose a file to upload"}
+                          {composerFiles.length > 0
+                            ? `${composerFiles.length} selected`
+                            : "Choose a file to upload"}
                         </p>
                       </div>
-                      <input
-                        type="file"
-                        accept={composerMode === "post" ? "image/*" : "video/*"}
-                        onChange={(e) => setComposerFile(e.target.files?.[0] ?? null)}
-                        className="max-w-full text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-xs file:font-semibold"
-                      />
+                        <input
+                          ref={composerInputRef}
+                          type="file"
+                          accept={composerMode === "post" ? "image/*" : "video/*"}
+                          multiple={composerMode === "post"}
+                          onChange={(e) => {
+                            addComposerFiles(e.target.files);
+                            e.target.value = "";
+                          }}
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => composerInputRef.current?.click()}
+                          className="grid h-9 w-9 place-items-center rounded-full border border-[var(--line)] bg-white text-sm font-semibold text-slate-700"
+                          aria-label="Add more media"
+                          title="Add more"
+                        >
+                          +
+                        </button>
                     </div>
                   </div>
                 )}
@@ -1604,7 +1818,7 @@ export default function Home() {
                     onClick={() => {
                       setComposerOpen(false);
                       setComposerMode("post");
-                      setComposerFile(null);
+                      setComposerFiles([]);
                       setStoryKind("Photo");
                     }}
                     className="h-10 rounded-xl border border-[var(--line)] bg-white px-4 text-sm font-semibold text-slate-700"
@@ -1637,7 +1851,7 @@ export default function Home() {
             onClick={() => {
               if (!publishing) {
                 setStoryComposerOpen(false);
-                setStoryFile(null);
+                setStoryFiles([]);
                 setStoryKind("Photo");
               }
             }}
@@ -1665,7 +1879,7 @@ export default function Home() {
                   type="button"
                   onClick={() => {
                     setStoryComposerOpen(false);
-                    setStoryFile(null);
+                    setStoryFiles([]);
                     setStoryKind("Photo");
                   }}
                   className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
@@ -1693,7 +1907,7 @@ export default function Home() {
                         type="button"
                         onClick={() => {
                           setStoryKind(kind);
-                          setStoryFile(null);
+                          setStoryFiles([]);
                         }}
                         className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                           storyKind === kind
@@ -1711,15 +1925,31 @@ export default function Home() {
                         Upload {storyKind === "Photo" ? "Photo" : "Video"}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {storyFile ? storyFile.name : "Choose from your device"}
+                        {storyFiles.length > 0
+                          ? `${storyFiles.length} selected`
+                          : "Choose from your device"}
                       </p>
                     </div>
-                    <input
-                      type="file"
-                      accept={storyKind === "Photo" ? "image/*" : "video/*"}
-                      onChange={(e) => setStoryFile(e.target.files?.[0] ?? null)}
-                      className="max-w-full text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-xs file:font-semibold"
-                    />
+                      <input
+                        ref={storyInputRef}
+                        type="file"
+                        accept={storyKind === "Photo" ? "image/*" : "video/*"}
+                        multiple
+                        onChange={(e) => {
+                          addStoryFiles(e.target.files);
+                          e.target.value = "";
+                        }}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => storyInputRef.current?.click()}
+                        className="grid h-9 w-9 place-items-center rounded-full border border-[var(--line)] bg-white text-sm font-semibold text-slate-700"
+                        aria-label="Add more media"
+                        title="Add more"
+                      >
+                        +
+                      </button>
                   </div>
                   <p className="mt-3 text-sm font-semibold text-slate-900">Move Preview</p>
                   <p className="mt-1 text-xs text-slate-500">
@@ -1729,8 +1959,8 @@ export default function Home() {
                     className="mt-3 rounded-2xl px-4 py-5 text-sm font-medium text-white"
                     style={{ background: user.avatarGradient }}
                   >
-                    {storyFile
-                      ? storyFile.name
+                    {storyFiles.length > 0
+                      ? `${storyFiles.length} file${storyFiles.length > 1 ? "s" : ""} selected`
                       : storyCaption.trim() || "Upload a photo or reel for your move."}
                   </div>
                 </div>
@@ -1746,7 +1976,7 @@ export default function Home() {
                     type="button"
                     onClick={() => {
                       setStoryComposerOpen(false);
-                      setStoryFile(null);
+                      setStoryFiles([]);
                       setStoryKind("Photo");
                     }}
                     className="h-10 rounded-xl border border-[var(--line)] bg-white px-4 text-sm font-semibold text-slate-700"
@@ -1763,6 +1993,58 @@ export default function Home() {
                   </button>
                 </div>
               </form>
+            </section>
+          </div>
+        ) : null}
+
+        {activeStory ? (
+          <div
+            className="fixed inset-0 z-[91] grid place-items-center bg-slate-950/25 px-4 backdrop-blur-sm"
+            onClick={closeStory}
+          >
+            <section
+              className="motion-surface w-full max-w-lg p-5"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Move"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2
+                    className="text-xl font-semibold text-slate-900"
+                    style={{ fontFamily: "var(--font-heading)" }}
+                  >
+                    {activeStory.name}&apos;s Move
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {activeStory.minutesLeft}m left
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeStory}
+                  className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
+                  aria-label="Close move"
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="mt-4">
+                {activeStoryMedia.length > 0 ? (
+                  <MediaCarousel media={activeStoryMedia} className="h-72 w-full rounded-2xl" />
+                ) : (
+                  <div
+                    className="h-72 w-full rounded-2xl"
+                    style={{ background: activeStory.gradient }}
+                  />
+                )}
+              </div>
+
+              {activeStory.caption ? (
+                <p className="mt-3 text-sm text-slate-700">{activeStory.caption}</p>
+              ) : null}
             </section>
           </div>
         ) : null}
@@ -2005,7 +2287,7 @@ export default function Home() {
                   <button
                     key={story.id}
                     data-seen={story.seen}
-                    onClick={() => void markSeen(story.id)}
+                    onClick={() => openStory(story.id)}
                     className="story-button"
                     type="button"
                     title={story.caption || `${story.name}'s move`}

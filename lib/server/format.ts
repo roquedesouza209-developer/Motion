@@ -1,6 +1,7 @@
 import type {
   CommentDto,
   CommentRecord,
+  MediaItem,
   PostDto,
   PostRecord,
   Presence,
@@ -85,6 +86,26 @@ export function buildHandle(name: string, existingHandles: string[]): string {
   return candidate;
 }
 
+function resolveMedia({
+  media,
+  mediaUrl,
+  mediaType,
+}: {
+  media?: MediaItem[];
+  mediaUrl?: string;
+  mediaType?: "image" | "video";
+}): MediaItem[] | undefined {
+  if (Array.isArray(media) && media.length > 0) {
+    return media;
+  }
+
+  if (mediaUrl && mediaType) {
+    return [{ url: mediaUrl, type: mediaType }];
+  }
+
+  return undefined;
+}
+
 export function mapPostToDto({
   post,
   usersById,
@@ -95,6 +116,12 @@ export function mapPostToDto({
   currentUserId: string | null;
 }): PostDto {
   const author = usersById.get(post.userId);
+  const media = resolveMedia({
+    media: post.media,
+    mediaUrl: post.mediaUrl,
+    mediaType: post.mediaType,
+  });
+  const primary = media?.[0];
 
   return {
     id: post.id,
@@ -112,8 +139,9 @@ export function mapPostToDto({
     gradient: post.gradient,
     createdAt: post.createdAt,
     timeAgo: formatPostAge(post.createdAt),
-    mediaUrl: post.mediaUrl,
-    mediaType: post.mediaType,
+    media,
+    mediaUrl: post.mediaUrl ?? primary?.url,
+    mediaType: post.mediaType ?? primary?.type,
   };
 }
 
@@ -129,6 +157,12 @@ export function mapStoryToDto({
   const owner = usersById.get(story.userId);
   const msLeft = new Date(story.expiresAt).getTime() - Date.now();
   const minutesLeft = Math.max(1, Math.floor(msLeft / 60_000));
+  const media = resolveMedia({
+    media: story.media,
+    mediaUrl: story.mediaUrl,
+    mediaType: story.mediaType,
+  });
+  const primary = media?.[0];
 
   return {
     id: story.id,
@@ -138,8 +172,9 @@ export function mapStoryToDto({
     gradient: story.gradient,
     caption: story.caption,
     seen: currentUserId ? story.seenBy.includes(currentUserId) : false,
-    mediaUrl: story.mediaUrl,
-    mediaType: story.mediaType,
+    media,
+    mediaUrl: story.mediaUrl ?? primary?.url,
+    mediaType: story.mediaType ?? primary?.type,
   };
 }
 
