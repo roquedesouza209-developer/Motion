@@ -2,14 +2,16 @@
   "users": [
     {
       "id": "usr_demo",
-      "name": "Morgan Otto",
-      "handle": "morgan.motion",
+      "name": "Roque Desouza",
+      "handle": "r_.oque",
       "role": "Creator",
       "email": "demo@motion.app",
       "passwordHash": "9f9b99478ede34b438ef3769d22ccce7cb94c6f21bd3832c83cbfea6284db211728429efc4fc1c4f3e5a4fcbb5fd1e3ce1d45ac1a8ca3760c4841a2f5ebc0b5a",
       "passwordSalt": "179fdfdab8113da3fa09d1ffdce98997",
       "avatarGradient": "linear-gradient(135deg, #ff8f6b, #ff5f6d)",
-      "createdAt": "2026-02-27T16:18:58.819Z"
+      "createdAt": "2026-02-27T16:18:58.819Z",
+      "bio": "Fulfilling my visuals ✌️",
+      "avatarUrl": "/uploads/upl_94a2444399fc4b8aa685f3acff3b613b.jpg"
     },
     {
       "id": "usr_lena",
@@ -161,6 +163,12 @@
       "userId": "usr_demo",
       "createdAt": "2026-03-11T15:07:56.839Z",
       "expiresAt": "2026-04-10T15:07:56.839Z"
+    },
+    {
+      "id": "ses_fff5c7fa73dd4cb6b56135ce6af475e4",
+      "userId": "usr_demo",
+      "createdAt": "2026-03-15T18:54:21.974Z",
+      "expiresAt": "2026-04-14T18:54:21.974Z"
     }
   ],
   "posts": [
@@ -246,7 +254,13 @@
       ],
       "savedBy": [],
       "commentCount": 0,
-      "createdAt": "2026-03-03T12:51:12.848Z"
+      "createdAt": "2026-03-03T12:51:12.848Z",
+      "media": [
+        {
+          "url": "/uploads/upl_d2018677c9f04c96a6853d86799e1987.png",
+          "type": "image"
+        }
+      ]
     },
     {
       "id": "pst_8520fbedaf3a4b61982cdb00ca6e85e1",
@@ -263,7 +277,14 @@
       ],
       "savedBy": [],
       "commentCount": 0,
-      "createdAt": "2026-03-03T12:51:49.607Z"
+      "createdAt": "2026-03-03T12:51:49.607Z",
+      "media": [
+        {
+          "url": "/uploads/upl_bb4f93adac2946248587f3a10ddcada4.mp4",
+          "type": "video"
+        }
+      ],
+      "deletedAt": "2026-03-14T06:17:17.939Z"
     },
     {
       "id": "pst_cd7a2762243a4831af5d58f33136f4d2",
@@ -280,7 +301,14 @@
       ],
       "savedBy": [],
       "commentCount": 0,
-      "createdAt": "2026-03-03T12:53:34.333Z"
+      "createdAt": "2026-03-03T12:53:34.333Z",
+      "media": [
+        {
+          "url": "/uploads/upl_c2b0d28bb4794d56844486bbf2010d9c.mp4",
+          "type": "video"
+        }
+      ],
+      "deletedAt": "2026-03-14T06:17:17.445Z"
     }
   ],
   "comments": [

@@ -25,9 +25,13 @@ const DEFAULT_POST_GRADIENTS = [
   "linear-gradient(145deg, #fbc2eb, #a6c1ee)",
 ];
 
-function normalizeScope(input: string | null): FeedScope {
+function normalizeScope(input: string | null): FeedScope | "bin" {
   if (input === "following") {
     return "following";
+  }
+
+  if (input === "bin") {
+    return "bin";
   }
 
   return "discover";
@@ -99,9 +103,15 @@ export async function GET(request: Request) {
   }
 
   const orderedPosts =
-    feedScope === "following"
+    feedScope === "bin"
       ? db.posts
+        .filter((post) => post.userId === currentUserId && post.deletedAt != null)
+        .sort((a, b) => new Date(b.deletedAt!).getTime() - new Date(a.deletedAt!).getTime())
+      : feedScope === "following"
+        ? db.posts
           .filter((post) => {
+            if (post.deletedAt != null) return false;
+
             if (!currentUserId) {
               return post.scope === "following";
             }
@@ -112,12 +122,30 @@ export async function GET(request: Request) {
             (a, b) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           )
-      : rankDiscoverPosts({
+        : rankDiscoverPosts({
           db,
           currentUserId,
-        });
+        }).filter((post) => post.deletedAt == null);
 
-  const data = orderedPosts
+  const visiblePosts = orderedPosts.filter((post) => {
+    const author = usersById.get(post.userId);
+    if (!author) return false;
+    if (author.id === currentUserId) return true;
+
+    const visibility = author.feedVisibility ?? "everyone";
+
+    if (visibility === "followers") {
+      if (!currentUserId || !followSet.has(author.id)) return false;
+    } else if (visibility === "non_followers") {
+      if (currentUserId && followSet.has(author.id)) return false;
+    } else if (visibility === "custom") {
+      if (currentUserId && author.hiddenFromIds?.includes(currentUserId)) return false;
+    }
+
+    return true;
+  });
+
+  const data = visiblePosts
     .map((post) => mapPostToDto({ post, usersById, currentUserId }));
 
   return NextResponse.json({ posts: data });

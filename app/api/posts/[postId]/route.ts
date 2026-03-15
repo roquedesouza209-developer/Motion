@@ -18,6 +18,9 @@ export async function DELETE(request: Request, context: RouteContext) {
 
   const { postId } = await context.params;
 
+  const { searchParams } = new URL(request.url);
+  const force = searchParams.get("force") === "true";
+
   const result = await updateDb((db) => {
     const postIndex = db.posts.findIndex((candidate) => candidate.id === postId);
 
@@ -29,6 +32,11 @@ export async function DELETE(request: Request, context: RouteContext) {
 
     if (post.userId !== user.id) {
       return { type: "forbidden" as const };
+    }
+
+    if (!force && !post.deletedAt) {
+      post.deletedAt = new Date().toISOString();
+      return { type: "soft_deleted" as const };
     }
 
     db.posts.splice(postIndex, 1);

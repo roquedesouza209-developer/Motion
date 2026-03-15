@@ -33,6 +33,8 @@ type User = {
   handle: string;
   email: string;
   avatarGradient: string;
+  avatarUrl?: string;
+  bio?: string;
 };
 
 type Story = {
@@ -628,11 +630,10 @@ function ViewportPicker({
                   onChange(option.id);
                   setOpen(false);
                 }}
-                className={`w-full rounded-lg border px-3 py-2 text-left text-xs font-semibold ${
-                  mode === option.id
-                    ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                    : "border-[var(--line)] bg-white text-slate-700"
-                }`}
+                className={`w-full rounded-lg border px-3 py-2 text-left text-xs font-semibold ${mode === option.id
+                  ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                  : "border-[var(--line)] bg-white text-slate-700"
+                  }`}
               >
                 {option.label}
               </button>
@@ -891,24 +892,22 @@ export default function Home() {
       {
         id: `like-${likeSource?.id ?? "latest"}`,
         title: "Liked your post",
-        detail: `${
-          likeSource?.author ?? "Mina Roe"
-        } liked your latest post.`,
+        detail: `${likeSource?.author ?? "Mina Roe"
+          } liked your latest post.`,
         meta: likeSource ? `${likeSource.likes} likes` : "New activity",
         tone: "like",
       },
       {
         id: `comment-${commentSource?.id ?? "latest"}`,
         title: "Commented",
-        detail: `${
-          commentSource?.author ?? "Noah Kim"
-        } commented on your post.`,
+        detail: `${commentSource?.author ?? "Noah Kim"
+          } commented on your post.`,
         meta: commentSource
           ? `${commentSource.comments} comments`
           : "New comment",
         tone: "comment",
-        },
-      ];
+      },
+    ];
   }, [conversations, photoPosts, posts, reels, stories, user]);
   const unseenNotificationItems = useMemo(
     () =>
@@ -942,10 +941,10 @@ export default function Home() {
     () =>
       activeStory
         ? resolveMediaItems({
-            media: activeStory.media,
-            mediaUrl: activeStory.mediaUrl,
-            mediaType: activeStory.mediaType,
-          })
+          media: activeStory.media,
+          mediaUrl: activeStory.mediaUrl,
+          mediaType: activeStory.mediaType,
+        })
         : [],
     [activeStory],
   );
@@ -1123,10 +1122,10 @@ export default function Home() {
       current.map((post) =>
         post.id === postId
           ? {
-              ...post,
-              liked: !post.liked,
-              likes: post.likes + (post.liked ? -1 : 1),
-            }
+            ...post,
+            liked: !post.liked,
+            likes: post.likes + (post.liked ? -1 : 1),
+          }
           : post,
       ),
     );
@@ -1390,11 +1389,11 @@ export default function Home() {
         const media =
           composerFiles.length > 0
             ? (await Promise.all(
-                composerFiles.map((file) => uploadSelectedMedia(file, storyKind)),
-              )).map((uploaded) => ({
-                url: uploaded.mediaUrl,
-                type: uploaded.mediaType,
-              }))
+              composerFiles.map((file) => uploadSelectedMedia(file, storyKind)),
+            )).map((uploaded) => ({
+              url: uploaded.mediaUrl,
+              type: uploaded.mediaType,
+            }))
             : undefined;
         await createStory({
           caption: composerCaption.trim() || undefined,
@@ -1415,11 +1414,11 @@ export default function Home() {
       const media =
         filesToUpload.length > 0
           ? (await Promise.all(
-              filesToUpload.map((file) => uploadSelectedMedia(file, postKind)),
-            )).map((uploaded) => ({
-              url: uploaded.mediaUrl,
-              type: uploaded.mediaType,
-            }))
+            filesToUpload.map((file) => uploadSelectedMedia(file, postKind)),
+          )).map((uploaded) => ({
+            url: uploaded.mediaUrl,
+            type: uploaded.mediaType,
+          }))
           : undefined;
       await req<{ post: Post }>("/api/posts", {
         method: "POST",
@@ -1459,11 +1458,11 @@ export default function Home() {
       const media =
         storyFiles.length > 0
           ? (await Promise.all(
-              storyFiles.map((file) => uploadSelectedMedia(file, storyKind)),
-            )).map((uploaded) => ({
-              url: uploaded.mediaUrl,
-              type: uploaded.mediaType,
-            }))
+            storyFiles.map((file) => uploadSelectedMedia(file, storyKind)),
+          )).map((uploaded) => ({
+            url: uploaded.mediaUrl,
+            type: uploaded.mediaType,
+          }))
           : undefined;
       await createStory({
         caption: storyCaption.trim() || undefined,
@@ -1539,203 +1538,205 @@ export default function Home() {
     <div className="motion-shell min-h-screen" data-viewport={viewportMode}>
       <div className="motion-viewport">
         <main className="w-full px-4 pb-20 pt-6">
-        <header className="motion-surface relative z-50 flex flex-wrap items-center justify-between gap-3 overflow-visible px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[var(--brand)] text-sm font-bold text-white">
-              MO
+          <header className="motion-surface relative z-50 flex flex-wrap items-center justify-between gap-3 overflow-visible px-4 py-4">
+            <div className="flex items-center gap-3">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[var(--brand)] text-sm font-bold text-white">
+                MO
+              </div>
+              <p className="text-lg font-semibold text-slate-900" style={{ fontFamily: "var(--font-heading)" }}>
+                Motion
+              </p>
             </div>
-            <p className="text-lg font-semibold text-slate-900" style={{ fontFamily: "var(--font-heading)" }}>
-              Motion
-            </p>
-          </div>
-          <div className="relative z-40 flex flex-wrap items-center justify-end gap-2">
-            <ViewportPicker mode={viewportMode} onChange={setViewportMode} />
-            <button
-              onClick={() => openComposer()}
-              className="grid h-10 w-10 place-items-center rounded-xl border border-[var(--line)] bg-white text-lg font-semibold text-slate-700"
-              type="button"
-              aria-label="Create"
-              title="Create"
-            >
-              +
-            </button>
-            <div ref={profileMenuRef} className="relative z-40">
+            <div className="relative z-40 flex flex-wrap items-center justify-end gap-2">
+              <ViewportPicker mode={viewportMode} onChange={setViewportMode} />
               <button
+                onClick={() => openComposer()}
+                className="grid h-10 w-10 place-items-center rounded-xl border border-[var(--line)] bg-white text-lg font-semibold text-slate-700"
                 type="button"
-                onClick={() => {
-                  setNotificationsOpen(false);
-                  setProfileMenuOpen((current) => !current);
-                }}
-                className="grid h-10 w-10 place-items-center rounded-full border border-[var(--line)] text-xs font-bold text-white"
-                style={{ background: user.avatarGradient }}
-                aria-label="Open profile menu"
-                title="Profile"
+                aria-label="Create"
+                title="Create"
               >
-                {user.name
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")
-                  .slice(0, 2)}
+                +
               </button>
-              {profileMenuOpen ? (
-                <div className="motion-surface header-popover min-w-52 p-2">
-                  <div className="rounded-xl bg-white/80 px-3 py-2">
-                    <p className="text-sm font-semibold text-slate-900">{user.name}</p>
-                    <p className="text-xs text-slate-500">@{user.handle}</p>
-                    <p className="mt-1 text-xs text-slate-500">{user.email}</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setProfileMenuOpen(false);
-                      router.push("/profile");
-                    }}
-                    className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700"
-                    type="button"
-                  >
-                    Profile
-                  </button>
-                  <button
-                    onClick={() => {
-                      setProfileMenuOpen(false);
-                      router.push("/profile?tab=saved");
-                    }}
-                    className="mt-2 flex w-full items-center justify-between rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-                    type="button"
-                  >
-                    <span>Vault</span>
-                    <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px]">
-                      {savedPosts.length}
-                    </span>
-                  </button>
-                  <button
-                    onClick={logout}
-                    className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-                    type="button"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </header>
-
-        {composerOpen ? (
-          <div
-            className="fixed inset-0 z-[90] grid place-items-center bg-slate-950/25 px-4 backdrop-blur-sm"
-            onClick={() => {
-              if (!publishing) {
-                setComposerOpen(false);
-                setComposerMode("post");
-                setComposerFiles([]);
-                setStoryKind("Photo");
-              }
-            }}
-          >
-            <section
-              className="motion-surface w-full max-w-xl p-5"
-              onClick={(event) => event.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Create"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2
-                    className="text-xl font-semibold text-slate-900"
-                    style={{ fontFamily: "var(--font-heading)" }}
-                  >
-                    Create
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Choose what you want to publish.
-                  </p>
-                </div>
+              <div ref={profileMenuRef} className="relative z-40">
                 <button
                   type="button"
                   onClick={() => {
-                    setComposerOpen(false);
-                    setComposerMode("post");
-                    setComposerFiles([]);
-                    setStoryKind("Photo");
+                    setNotificationsOpen(false);
+                    setProfileMenuOpen((current) => !current);
                   }}
-                  className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
-                  aria-label="Close composer"
-                  disabled={publishing}
+                  className="grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-[var(--line)] text-xs font-bold text-white"
+                  style={user.avatarUrl ? undefined : { background: user.avatarGradient }}
+                  aria-label="Open profile menu"
+                  title="Profile"
                 >
-                  x
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+                  ) : (
+                    user.name
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                  )}
                 </button>
-              </div>
-
-              <form className="mt-4 space-y-4" onSubmit={publish}>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {[
-                    { id: "post" as const, label: "Post" },
-                    { id: "reel" as const, label: "Reel" },
-                    { id: "story" as const, label: "Move" },
-                  ].map((option) => (
+                {profileMenuOpen ? (
+                  <div className="motion-surface header-popover min-w-52 p-2">
+                    <div className="rounded-xl bg-white/80 px-3 py-2">
+                      <p className="text-sm font-semibold text-slate-900">{user.name}</p>
+                      <p className="text-xs text-slate-500">@{user.handle}</p>
+                      <p className="mt-1 text-xs text-slate-500">{user.email}</p>
+                    </div>
                     <button
-                      key={option.id}
-                      type="button"
                       onClick={() => {
-                        setComposerMode(option.id);
-                        setComposerFiles([]);
+                        setProfileMenuOpen(false);
+                        router.push("/profile");
                       }}
-                      className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${
-                        composerMode === option.id
-                          ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                          : "border-[var(--line)] bg-white text-slate-700"
-                      }`}
+                      className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700"
+                      type="button"
                     >
-                      {option.label}
+                      Profile
                     </button>
-                  ))}
+                    <button
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        router.push("/profile?tab=saved");
+                      }}
+                      className="mt-2 flex w-full items-center justify-between rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+                      type="button"
+                    >
+                      <span>Vault</span>
+                      <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px]">
+                        {savedPosts.length}
+                      </span>
+                    </button>
+                    <button
+                      onClick={logout}
+                      className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+                      type="button"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </header>
+
+          {composerOpen ? (
+            <div
+              className="fixed inset-0 z-[90] grid place-items-center bg-slate-950/25 px-4 backdrop-blur-sm"
+              onClick={() => {
+                if (!publishing) {
+                  setComposerOpen(false);
+                  setComposerMode("post");
+                  setComposerFiles([]);
+                  setStoryKind("Photo");
+                }
+              }}
+            >
+              <section
+                className="motion-surface w-full max-w-xl p-5"
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Create"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2
+                      className="text-xl font-semibold text-slate-900"
+                      style={{ fontFamily: "var(--font-heading)" }}
+                    >
+                      Create
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Choose what you want to publish.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setComposerOpen(false);
+                      setComposerMode("post");
+                      setComposerFiles([]);
+                      setStoryKind("Photo");
+                    }}
+                    className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
+                    aria-label="Close composer"
+                    disabled={publishing}
+                  >
+                    x
+                  </button>
                 </div>
 
-                <textarea
-                  ref={composerCaptionRef}
-                  value={composerCaption}
-                  onChange={(e) => setComposerCaption(e.target.value)}
-                  className="min-h-32 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-sm"
-                  placeholder={
-                    composerMode === "story"
-                      ? "Add a move caption (optional)..."
-                      : "What&apos;s on your mind?"
-                  }
-                />
+                <form className="mt-4 space-y-4" onSubmit={publish}>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {[
+                      { id: "post" as const, label: "Post" },
+                      { id: "reel" as const, label: "Reel" },
+                      { id: "story" as const, label: "Move" },
+                    ].map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => {
+                          setComposerMode(option.id);
+                          setComposerFiles([]);
+                        }}
+                        className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${composerMode === option.id
+                          ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                          : "border-[var(--line)] bg-white text-slate-700"
+                          }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
 
-                {composerMode === "story" ? (
-                  <div className="rounded-2xl border border-[var(--line)] bg-white p-3">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {(["Photo", "Reel"] as PostKind[]).map((kind) => (
-                        <button
-                          key={kind}
-                          type="button"
-                          onClick={() => {
-                            setStoryKind(kind);
-                            setComposerFiles([]);
-                          }}
-                          className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                            storyKind === kind
+                  <textarea
+                    ref={composerCaptionRef}
+                    value={composerCaption}
+                    onChange={(e) => setComposerCaption(e.target.value)}
+                    className="min-h-32 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-sm"
+                    placeholder={
+                      composerMode === "story"
+                        ? "Add a move caption (optional)..."
+                        : "What&apos;s on your mind?"
+                    }
+                  />
+
+                  {composerMode === "story" ? (
+                    <div className="rounded-2xl border border-[var(--line)] bg-white p-3">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {(["Photo", "Reel"] as PostKind[]).map((kind) => (
+                          <button
+                            key={kind}
+                            type="button"
+                            onClick={() => {
+                              setStoryKind(kind);
+                              setComposerFiles([]);
+                            }}
+                            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${storyKind === kind
                               ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                               : "border-[var(--line)] bg-white text-slate-700"
-                          }`}
-                        >
-                          {kind === "Photo" ? "Photo Move" : "Reel Move"}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          Upload {storyKind === "Photo" ? "Photo" : "Video"}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {composerFiles.length > 0
-                            ? `${composerFiles.length} selected`
-                            : "Choose from your device"}
-                        </p>
+                              }`}
+                          >
+                            {kind === "Photo" ? "Photo Move" : "Reel Move"}
+                          </button>
+                        ))}
                       </div>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            Upload {storyKind === "Photo" ? "Photo" : "Video"}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {composerFiles.length > 0
+                              ? `${composerFiles.length} selected`
+                              : "Choose from your device"}
+                          </p>
+                        </div>
                         <input
                           ref={composerInputRef}
                           type="file"
@@ -1756,32 +1757,32 @@ export default function Home() {
                         >
                           +
                         </button>
-                    </div>
-                    <p className="mt-3 text-xs text-slate-500">
-                      Moves are temporary. They disappear after 24 hours.
-                    </p>
-                    <div
-                      className="mt-3 rounded-2xl px-4 py-5 text-sm font-medium text-white"
-                      style={{ background: user.avatarGradient }}
-                    >
-                      {composerFiles.length > 0
-                        ? `${composerFiles.length} file${composerFiles.length > 1 ? "s" : ""} selected`
-                        : composerCaption.trim() || "Upload a photo or reel for your move."}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-[var(--line)] bg-white p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          Add {composerMode === "post" ? "Photo" : "Reel"}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {composerFiles.length > 0
-                            ? `${composerFiles.length} selected`
-                            : "Choose a file to upload"}
-                        </p>
                       </div>
+                      <p className="mt-3 text-xs text-slate-500">
+                        Moves are temporary. They disappear after 24 hours.
+                      </p>
+                      <div
+                        className="mt-3 rounded-2xl px-4 py-5 text-sm font-medium text-white"
+                        style={{ background: user.avatarGradient }}
+                      >
+                        {composerFiles.length > 0
+                          ? `${composerFiles.length} file${composerFiles.length > 1 ? "s" : ""} selected`
+                          : composerCaption.trim() || "Upload a photo or reel for your move."}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-[var(--line)] bg-white p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            Add {composerMode === "post" ? "Photo" : "Reel"}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {composerFiles.length > 0
+                              ? `${composerFiles.length} selected`
+                              : "Choose a file to upload"}
+                          </p>
+                        </div>
                         <input
                           ref={composerInputRef}
                           type="file"
@@ -1802,134 +1803,133 @@ export default function Home() {
                         >
                           +
                         </button>
+                      </div>
                     </div>
+                  )}
+
+                  {error ? (
+                    <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {error}
+                    </p>
+                  ) : null}
+
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setComposerOpen(false);
+                        setComposerMode("post");
+                        setComposerFiles([]);
+                        setStoryKind("Photo");
+                      }}
+                      className="h-10 rounded-xl border border-[var(--line)] bg-white px-4 text-sm font-semibold text-slate-700"
+                      disabled={publishing}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={publishing}
+                      className="h-10 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white disabled:opacity-60"
+                      type="submit"
+                    >
+                      {publishing
+                        ? "Publishing..."
+                        : composerMode === "story"
+                          ? "Move"
+                          : composerMode === "reel"
+                            ? "Reel"
+                            : "Post"}
+                    </button>
                   </div>
-                )}
+                </form>
+              </section>
+            </div>
+          ) : null}
 
-                {error ? (
-                  <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                    {error}
-                  </p>
-                ) : null}
-
-                <div className="flex justify-end gap-2">
+          {storyComposerOpen ? (
+            <div
+              className="fixed inset-0 z-[90] grid place-items-center bg-slate-950/25 px-4 backdrop-blur-sm"
+              onClick={() => {
+                if (!publishing) {
+                  setStoryComposerOpen(false);
+                  setStoryFiles([]);
+                  setStoryKind("Photo");
+                }
+              }}
+            >
+              <section
+                className="motion-surface w-full max-w-lg p-5"
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Create move"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2
+                      className="text-xl font-semibold text-slate-900"
+                      style={{ fontFamily: "var(--font-heading)" }}
+                    >
+                      Your Move
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      This is a dedicated move composer.
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
-                      setComposerOpen(false);
-                      setComposerMode("post");
-                      setComposerFiles([]);
+                      setStoryComposerOpen(false);
+                      setStoryFiles([]);
                       setStoryKind("Photo");
                     }}
-                    className="h-10 rounded-xl border border-[var(--line)] bg-white px-4 text-sm font-semibold text-slate-700"
+                    className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
+                    aria-label="Close move composer"
                     disabled={publishing}
                   >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={publishing}
-                    className="h-10 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white disabled:opacity-60"
-                    type="submit"
-                  >
-                    {publishing
-                      ? "Publishing..."
-                      : composerMode === "story"
-                        ? "Move"
-                        : composerMode === "reel"
-                          ? "Reel"
-                          : "Post"}
+                    x
                   </button>
                 </div>
-              </form>
-            </section>
-          </div>
-        ) : null}
 
-        {storyComposerOpen ? (
-          <div
-            className="fixed inset-0 z-[90] grid place-items-center bg-slate-950/25 px-4 backdrop-blur-sm"
-            onClick={() => {
-              if (!publishing) {
-                setStoryComposerOpen(false);
-                setStoryFiles([]);
-                setStoryKind("Photo");
-              }
-            }}
-          >
-            <section
-              className="motion-surface w-full max-w-lg p-5"
-              onClick={(event) => event.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Create move"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2
-                    className="text-xl font-semibold text-slate-900"
-                    style={{ fontFamily: "var(--font-heading)" }}
-                  >
-                    Your Move
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    This is a dedicated move composer.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStoryComposerOpen(false);
-                    setStoryFiles([]);
-                    setStoryKind("Photo");
-                  }}
-                  className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
-                  aria-label="Close move composer"
-                  disabled={publishing}
-                >
-                  x
-                </button>
-              </div>
+                <form className="mt-4 space-y-4" onSubmit={publishStory}>
+                  <textarea
+                    ref={storyCaptionRef}
+                    value={storyCaption}
+                    onChange={(e) => setStoryCaption(e.target.value)}
+                    className="min-h-32 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-sm"
+                    placeholder="Add a move caption (optional)..."
+                  />
 
-              <form className="mt-4 space-y-4" onSubmit={publishStory}>
-                <textarea
-                  ref={storyCaptionRef}
-                  value={storyCaption}
-                  onChange={(e) => setStoryCaption(e.target.value)}
-                  className="min-h-32 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-sm"
-                  placeholder="Add a move caption (optional)..."
-                />
-
-                <div className="rounded-2xl border border-[var(--line)] bg-white p-3">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {(["Photo", "Reel"] as PostKind[]).map((kind) => (
-                      <button
-                        key={kind}
-                        type="button"
-                        onClick={() => {
-                          setStoryKind(kind);
-                          setStoryFiles([]);
-                        }}
-                        className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                          storyKind === kind
+                  <div className="rounded-2xl border border-[var(--line)] bg-white p-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {(["Photo", "Reel"] as PostKind[]).map((kind) => (
+                        <button
+                          key={kind}
+                          type="button"
+                          onClick={() => {
+                            setStoryKind(kind);
+                            setStoryFiles([]);
+                          }}
+                          className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${storyKind === kind
                             ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                             : "border-[var(--line)] bg-white text-slate-700"
-                        }`}
-                      >
-                        {kind === "Photo" ? "Photo Move" : "Reel Move"}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        Upload {storyKind === "Photo" ? "Photo" : "Video"}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {storyFiles.length > 0
-                          ? `${storyFiles.length} selected`
-                          : "Choose from your device"}
-                      </p>
+                            }`}
+                        >
+                          {kind === "Photo" ? "Photo Move" : "Reel Move"}
+                        </button>
+                      ))}
                     </div>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          Upload {storyKind === "Photo" ? "Photo" : "Video"}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {storyFiles.length > 0
+                            ? `${storyFiles.length} selected`
+                            : "Choose from your device"}
+                        </p>
+                      </div>
                       <input
                         ref={storyInputRef}
                         type="file"
@@ -1950,723 +1950,890 @@ export default function Home() {
                       >
                         +
                       </button>
+                    </div>
+                    <p className="mt-3 text-sm font-semibold text-slate-900">Move Preview</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Quick, temporary, and separate from the main feed.
+                    </p>
+                    <div
+                      className="mt-3 rounded-2xl px-4 py-5 text-sm font-medium text-white"
+                      style={{ background: user.avatarGradient }}
+                    >
+                      {storyFiles.length > 0
+                        ? `${storyFiles.length} file${storyFiles.length > 1 ? "s" : ""} selected`
+                        : storyCaption.trim() || "Upload a photo or reel for your move."}
+                    </div>
                   </div>
-                  <p className="mt-3 text-sm font-semibold text-slate-900">Move Preview</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Quick, temporary, and separate from the main feed.
-                  </p>
-                  <div
-                    className="mt-3 rounded-2xl px-4 py-5 text-sm font-medium text-white"
-                    style={{ background: user.avatarGradient }}
+
+                  {error ? (
+                    <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {error}
+                    </p>
+                  ) : null}
+
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStoryComposerOpen(false);
+                        setStoryFiles([]);
+                        setStoryKind("Photo");
+                      }}
+                      className="h-10 rounded-xl border border-[var(--line)] bg-white px-4 text-sm font-semibold text-slate-700"
+                      disabled={publishing}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={publishing}
+                      className="h-10 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white disabled:opacity-60"
+                      type="submit"
+                    >
+                      {publishing ? "Publishing..." : "Move"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            </div>
+          ) : null}
+
+          {activeStory ? (
+            <div
+              className="fixed inset-0 z-[91] grid place-items-center bg-slate-950/25 px-4 backdrop-blur-sm"
+              onClick={closeStory}
+            >
+              <section
+                className="motion-surface w-full max-w-lg p-5"
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Move"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2
+                      className="text-xl font-semibold text-slate-900"
+                      style={{ fontFamily: "var(--font-heading)" }}
+                    >
+                      {activeStory.name}&apos;s Move
+                    </h2>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {activeStory.minutesLeft}m left
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeStory}
+                    className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
+                    aria-label="Close move"
                   >
-                    {storyFiles.length > 0
-                      ? `${storyFiles.length} file${storyFiles.length > 1 ? "s" : ""} selected`
-                      : storyCaption.trim() || "Upload a photo or reel for your move."}
-                  </div>
+                    x
+                  </button>
                 </div>
 
-                {error ? (
-                  <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                    {error}
-                  </p>
+                <div className="mt-4">
+                  {activeStoryMedia.length > 0 ? (
+                    <MediaCarousel media={activeStoryMedia} className="h-72 w-full rounded-2xl" />
+                  ) : (
+                    <div
+                      className="h-72 w-full rounded-2xl"
+                      style={{ background: activeStory.gradient }}
+                    />
+                  )}
+                </div>
+
+                {activeStory.caption ? (
+                  <p className="mt-3 text-sm text-slate-700">{activeStory.caption}</p>
+                ) : null}
+              </section>
+            </div>
+          ) : null}
+
+          {commentsPostId ? (
+            <div
+              className="fixed inset-0 z-[92] grid place-items-center bg-slate-950/25 px-4 backdrop-blur-sm"
+              onClick={closeComments}
+            >
+              <section
+                className="motion-surface w-full max-w-2xl p-5"
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Comments"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2
+                      className="text-xl font-semibold text-slate-900"
+                      style={{ fontFamily: "var(--font-heading)" }}
+                    >
+                      Comments
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {activeCommentsPost
+                        ? `${activeCommentsPost.author} · ${commentsTotal} comments`
+                        : `${commentsTotal} comments`}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeComments}
+                    className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
+                    aria-label="Close comments"
+                    disabled={commentSubmitting}
+                  >
+                    x
+                  </button>
+                </div>
+
+                {activeCommentsPost ? (
+                  <div className="mt-4 rounded-2xl border border-[var(--line)] bg-white px-4 py-3">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {activeCommentsPost.author}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {activeCommentsPost.caption}
+                    </p>
+                  </div>
                 ) : null}
 
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStoryComposerOpen(false);
-                      setStoryFiles([]);
-                      setStoryKind("Photo");
-                    }}
-                    className="h-10 rounded-xl border border-[var(--line)] bg-white px-4 text-sm font-semibold text-slate-700"
-                    disabled={publishing}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={publishing}
-                    className="h-10 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white disabled:opacity-60"
-                    type="submit"
-                  >
-                    {publishing ? "Publishing..." : "Move"}
-                  </button>
-                </div>
-              </form>
-            </section>
-          </div>
-        ) : null}
-
-        {activeStory ? (
-          <div
-            className="fixed inset-0 z-[91] grid place-items-center bg-slate-950/25 px-4 backdrop-blur-sm"
-            onClick={closeStory}
-          >
-            <section
-              className="motion-surface w-full max-w-lg p-5"
-              onClick={(event) => event.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Move"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2
-                    className="text-xl font-semibold text-slate-900"
-                    style={{ fontFamily: "var(--font-heading)" }}
-                  >
-                    {activeStory.name}&apos;s Move
-                  </h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {activeStory.minutesLeft}m left
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={closeStory}
-                  className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
-                  aria-label="Close move"
-                >
-                  x
-                </button>
-              </div>
-
-              <div className="mt-4">
-                {activeStoryMedia.length > 0 ? (
-                  <MediaCarousel media={activeStoryMedia} className="h-72 w-full rounded-2xl" />
-                ) : (
-                  <div
-                    className="h-72 w-full rounded-2xl"
-                    style={{ background: activeStory.gradient }}
-                  />
-                )}
-              </div>
-
-              {activeStory.caption ? (
-                <p className="mt-3 text-sm text-slate-700">{activeStory.caption}</p>
-              ) : null}
-            </section>
-          </div>
-        ) : null}
-
-        {commentsPostId ? (
-          <div
-            className="fixed inset-0 z-[92] grid place-items-center bg-slate-950/25 px-4 backdrop-blur-sm"
-            onClick={closeComments}
-          >
-            <section
-              className="motion-surface w-full max-w-2xl p-5"
-              onClick={(event) => event.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Comments"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2
-                    className="text-xl font-semibold text-slate-900"
-                    style={{ fontFamily: "var(--font-heading)" }}
-                  >
-                    Comments
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {activeCommentsPost
-                      ? `${activeCommentsPost.author} · ${commentsTotal} comments`
-                      : `${commentsTotal} comments`}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={closeComments}
-                  className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-500"
-                  aria-label="Close comments"
-                  disabled={commentSubmitting}
-                >
-                  x
-                </button>
-              </div>
-
-              {activeCommentsPost ? (
-                <div className="mt-4 rounded-2xl border border-[var(--line)] bg-white px-4 py-3">
-                  <p className="text-sm font-semibold text-slate-900">
-                    {activeCommentsPost.author}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {activeCommentsPost.caption}
-                  </p>
-                </div>
-              ) : null}
-
-              <div className="mt-4 max-h-[45vh] space-y-3 overflow-y-auto pr-1">
-                {commentsLoading ? (
-                  <p className="rounded-2xl border border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
-                    Loading comments...
-                  </p>
-                ) : commentEntries.length > 0 ? (
-                  <>
-                    {commentEntries.map((comment) => (
-                      <div
-                        key={comment.id}
-                        className="rounded-2xl border border-[var(--line)] bg-white px-4 py-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div
-                            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white"
-                            style={{ background: comment.avatarGradient }}
-                          >
-                            {comment.author
-                              .split(" ")
-                              .map((part) => part[0])
-                              .join("")
-                              .slice(0, 2)}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <p className="text-sm font-semibold text-slate-900">
-                                {comment.author}
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                {comment.handle}
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                {comment.time}
+                <div className="mt-4 max-h-[45vh] space-y-3 overflow-y-auto pr-1">
+                  {commentsLoading ? (
+                    <p className="rounded-2xl border border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
+                      Loading comments...
+                    </p>
+                  ) : commentEntries.length > 0 ? (
+                    <>
+                      {commentEntries.map((comment) => (
+                        <div
+                          key={comment.id}
+                          className="rounded-2xl border border-[var(--line)] bg-white px-4 py-3"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white"
+                              style={{ background: comment.avatarGradient }}
+                            >
+                              {comment.author
+                                .split(" ")
+                                .map((part) => part[0])
+                                .join("")
+                                .slice(0, 2)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {comment.author}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {comment.handle}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {comment.time}
+                                </p>
+                              </div>
+                              <p className="mt-1 text-sm text-slate-700">
+                                {comment.text}
                               </p>
                             </div>
-                            <p className="mt-1 text-sm text-slate-700">
-                              {comment.text}
-                            </p>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                    {commentsTotal > commentEntries.length ? (
-                      <p className="px-1 text-xs text-slate-500">
-                        Showing {commentEntries.length} visible comments.{" "}
-                        {commentsTotal - commentEntries.length} older comments are not
-                        loaded in this preview.
-                      </p>
-                    ) : null}
-                  </>
-                ) : (
-                  <p className="rounded-2xl border border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
-                    No comments yet. Start the conversation.
-                  </p>
-                )}
-              </div>
-
-              <form onSubmit={submitComment} className="mt-4 space-y-3">
-                <textarea
-                  value={commentDraft}
-                  onChange={(event) => setCommentDraft(event.target.value)}
-                  className="min-h-24 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-sm"
-                  placeholder="Write a comment..."
-                  maxLength={280}
-                  autoFocus
-                />
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-slate-500">
-                      {commentDraft.trim().length}/280
-                    </p>
-                    {commentsError ? (
-                      <p className="mt-1 text-xs text-red-700">{commentsError}</p>
-                    ) : null}
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={commentSubmitting || commentsLoading}
-                    className="h-10 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white disabled:opacity-60"
-                  >
-                    {commentSubmitting ? "Posting..." : "Post Comment"}
-                  </button>
-                </div>
-              </form>
-            </section>
-          </div>
-        ) : null}
-
-        {error && !composerOpen && !storyComposerOpen && !commentsPostId ? (
-          <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="motion-layout-grid mt-5 grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)_280px]">
-          <aside className="motion-surface motion-sidebar self-start p-4">
-            <div className="mb-4 flex items-center gap-3">
-              <div
-                className="grid h-11 w-11 place-items-center rounded-full text-xs font-bold text-white"
-                style={{ background: user.avatarGradient }}
-              >
-                {user.name
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")
-                  .slice(0, 2)}
-              </div>
-              <div>
-                <p className="text-sm font-semibold">{user.name}</p>
-                <p className="text-xs text-slate-500">@{user.handle}</p>
-              </div>
-            </div>
-            {["Home", "Reels", "Messages", "Explore"].map((item) => (
-              item === "Home" ? (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={goHome}
-                  className="nav-item mb-2 w-full text-left text-sm"
-                  aria-pressed={contentView === "posts" && !chatOpen}
-                >
-                  {item}
-                </button>
-              ) : item === "Messages" ? (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={openChat}
-                  className="nav-item mb-2 w-full text-left text-sm"
-                  aria-expanded={chatOpen}
-                >
-                  {item}
-                  {unread > 0 ? ` (${unread})` : ""}
-                </button>
-              ) : item === "Reels" ? (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => router.push("/reels")}
-                  className="nav-item mb-2 w-full text-left text-sm"
-                  aria-label="Open reels page"
-                >
-                  {item}
-                </button>
-              ) : item === "Explore" ? (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => router.push("/explore")}
-                  className="nav-item mb-2 w-full text-left text-sm"
-                  aria-label="Open explore page"
-                >
-                  {item}
-                </button>
-              ) : (
-                <div key={item} className="nav-item mb-2 text-sm">
-                  {item}
-                </div>
-              )
-            ))}
-          </aside>
-
-          <section className="motion-main space-y-5">
-            <section className="motion-surface p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <div>
-                  <h2 className="font-semibold">Moves</h2>
-                  <p className="text-[11px] text-slate-500">Photo/video · 24h only</p>
-                </div>
-                <span className="text-xs text-slate-500">Disappear in 24h</span>
-              </div>
-              <div className="story-strip">
-                <button
-                  className="story-button is-own-story"
-                  onClick={openStoryComposer}
-                  type="button"
-                >
-                  <span className="story-frame">
-                    <span className="story-avatar" style={{ background: user.avatarGradient }}>
-                      {user.name.slice(0, 2).toUpperCase()}
-                      <span className="story-avatar-badge">+</span>
-                    </span>
-                  </span>
-                  <span className="text-xs font-semibold">Your Move</span>
-                  <span className="text-[11px] text-slate-500">Add now</span>
-                </button>
-                {stories.map((story) => (
-                  <button
-                    key={story.id}
-                    data-seen={story.seen}
-                    onClick={() => openStory(story.id)}
-                    className="story-button"
-                    type="button"
-                    title={story.caption || `${story.name}'s move`}
-                  >
-                    <span className="story-frame">
-                      <StoryAvatarContent story={story} />
-                    </span>
-                    <span className="text-xs font-semibold">{story.name}</span>
-                    <span className="text-[11px] text-slate-500">
-                      {story.seen ? "Seen" : `${story.minutesLeft}m left`}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section ref={feedSectionRef} className="motion-surface p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="inline-flex rounded-full border border-[var(--line)] bg-white p-1">
-                  <button
-                    className={`rounded-full px-3 py-1 text-sm ${
-                      contentView === "posts" ? "bg-[var(--brand)] text-white" : ""
-                    }`}
-                    onClick={() => openContentView("posts")}
-                    type="button"
-                  >
-                    Posts
-                  </button>
-                  <button
-                    className={`rounded-full px-3 py-1 text-sm ${
-                      contentView === "reels" ? "bg-[var(--brand)] text-white" : ""
-                    }`}
-                    onClick={() => openContentView("reels")}
-                    type="button"
-                  >
-                    Reels
-                  </button>
-                </div>
-                <span className="text-xs text-slate-500">
-                  {visiblePosts.length} {contentView === "posts" ? "Posts" : "Reels"}
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {visiblePosts.map((post) => (
-                  <article key={post.id} className="rounded-2xl border border-[var(--line)] bg-white p-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold">{post.author}</p>
-                        <p className="text-xs text-slate-500">
-                          {post.location ? `${post.handle} - ${post.location}` : post.handle}
+                      ))}
+                      {commentsTotal > commentEntries.length ? (
+                        <p className="px-1 text-xs text-slate-500">
+                          Showing {commentEntries.length} visible comments.{" "}
+                          {commentsTotal - commentEntries.length} older comments are not
+                          loaded in this preview.
                         </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="text-[11px] text-slate-500">
-                          <LivePostAge
-                            createdAt={post.createdAt}
-                            initialLabel={post.timeAgo}
-                          />
-                        </span>
-                        <span className="rounded-full bg-[var(--brand-soft)] px-2 py-1 text-[11px]">
-                          {post.kind}
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className="post-media-frame mb-3"
-                      onDoubleClick={() => handlePostDoubleClick(post)}
-                    >
-                      <MediaPreview post={post} className="h-56 w-full rounded-xl" />
-                      {heartBurst?.postId === post.id ? (
-                        <div key={heartBurst.token} className="like-burst">
-                          <svg
-                            viewBox="0 0 64 64"
-                            className="like-burst-heart"
-                            aria-hidden="true"
-                          >
-                            <path
-                              d="M32 55c-1.4 0-2.8-.5-4-1.5C20.7 47.2 8 36.7 8 22.9 8 14.7 14.3 9 22.3 9c4.1 0 8.1 1.8 10.7 4.9C35.6 10.8 39.6 9 43.7 9 51.7 9 58 14.7 58 22.9c0 13.8-12.7 24.3-20 30.6-1.2 1-2.6 1.5-4 1.5Z"
-                              fill="#e11d48"
-                              stroke="#111111"
-                              strokeWidth="4"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="rounded-2xl border border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
+                      No comments yet. Start the conversation.
+                    </p>
+                  )}
+                </div>
+
+                <form onSubmit={submitComment} className="mt-4 space-y-3">
+                  <textarea
+                    value={commentDraft}
+                    onChange={(event) => setCommentDraft(event.target.value)}
+                    className="min-h-24 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-sm"
+                    placeholder="Write a comment..."
+                    maxLength={280}
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-slate-500">
+                        {commentDraft.trim().length}/280
+                      </p>
+                      {commentsError ? (
+                        <p className="mt-1 text-xs text-red-700">{commentsError}</p>
                       ) : null}
                     </div>
-                    <p className="text-sm text-slate-700">{post.caption}</p>
-                    <div className="mt-3 flex items-center justify-between gap-3 text-xs">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => void like(post.id)}
-                          className={`rounded-full border px-3 py-1 ${
-                            post.liked
+                    <button
+                      type="submit"
+                      disabled={commentSubmitting || commentsLoading}
+                      className="h-10 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white disabled:opacity-60"
+                    >
+                      {commentSubmitting ? "Posting..." : "Post Comment"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            </div>
+          ) : null}
+
+          {error && !composerOpen && !storyComposerOpen && !commentsPostId ? (
+            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </p>
+          ) : null}
+
+          <div className="motion-layout-grid mt-5 grid gap-5 md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[220px_minmax(0,1fr)_280px]">
+            <aside className="motion-surface motion-sidebar hidden self-start p-4 md:flex md:flex-col">
+              <div className="mb-4 flex items-center gap-3">
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    className="h-11 w-11 rounded-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="grid h-11 w-11 place-items-center rounded-full text-xs font-bold text-white"
+                    style={{ background: user.avatarGradient }}
+                  >
+                    {user.name
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)}
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-semibold">{user.name}</p>
+                  <p className="text-xs text-slate-500">@{user.handle}</p>
+                </div>
+              </div>
+              {["Home", "Reels", "Messages", "Explore"].map((item) => (
+                item === "Home" ? (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={goHome}
+                    className="nav-item mb-2 w-full text-left text-sm"
+                    aria-pressed={contentView === "posts" && !chatOpen}
+                  >
+                    {item}
+                  </button>
+                ) : item === "Messages" ? (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={openChat}
+                    className="nav-item mb-2 w-full text-left text-sm"
+                    aria-expanded={chatOpen}
+                  >
+                    {item}
+                    {unread > 0 ? ` (${unread})` : ""}
+                  </button>
+                ) : item === "Reels" ? (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => router.push("/reels")}
+                    className="nav-item mb-2 w-full text-left text-sm"
+                    aria-label="Open reels page"
+                  >
+                    {item}
+                  </button>
+                ) : item === "Explore" ? (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => router.push("/explore")}
+                    className="nav-item mb-2 w-full text-left text-sm"
+                    aria-label="Open explore page"
+                  >
+                    {item}
+                  </button>
+                ) : (
+                  <div key={item} className="nav-item mb-2 text-sm">
+                    {item}
+                  </div>
+                )
+              ))}
+            </aside>
+
+            <section className="motion-main space-y-5">
+              <section className="motion-surface p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold">Moves</h2>
+                    <p className="text-[11px] text-slate-500">Photo/video · 24h only</p>
+                  </div>
+                  <span className="text-xs text-slate-500">Disappear in 24h</span>
+                </div>
+                <div className="story-strip">
+                  <button
+                    className="story-button is-own-story"
+                    onClick={openStoryComposer}
+                    type="button"
+                  >
+                    <span className="story-frame">
+                      {user.avatarUrl ? (
+                        <span className="story-avatar" style={{ overflow: "hidden" }}>
+                          <img src={user.avatarUrl} alt={user.name} className="h-full w-full rounded-full object-cover" />
+                          <span className="story-avatar-badge">+</span>
+                        </span>
+                      ) : (
+                        <span className="story-avatar" style={{ background: user.avatarGradient }}>
+                          {user.name.slice(0, 2).toUpperCase()}
+                          <span className="story-avatar-badge">+</span>
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-xs font-semibold">Your Move</span>
+                    <span className="text-[11px] text-slate-500">Add now</span>
+                  </button>
+                  {stories.map((story) => (
+                    <button
+                      key={story.id}
+                      data-seen={story.seen}
+                      onClick={() => openStory(story.id)}
+                      className="story-button"
+                      type="button"
+                      title={story.caption || `${story.name}'s move`}
+                    >
+                      <span className="story-frame">
+                        <StoryAvatarContent story={story} />
+                      </span>
+                      <span className="text-xs font-semibold">{story.name}</span>
+                      <span className="text-[11px] text-slate-500">
+                        {story.seen ? "Seen" : `${story.minutesLeft}m left`}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section ref={feedSectionRef} className="motion-surface p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="inline-flex rounded-full border border-[var(--line)] bg-white p-1">
+                    <button
+                      className={`rounded-full px-3 py-1 text-sm ${contentView === "posts" ? "bg-[var(--brand)] text-white" : ""
+                        }`}
+                      onClick={() => openContentView("posts")}
+                      type="button"
+                    >
+                      Posts
+                    </button>
+                    <button
+                      className={`rounded-full px-3 py-1 text-sm ${contentView === "reels" ? "bg-[var(--brand)] text-white" : ""
+                        }`}
+                      onClick={() => openContentView("reels")}
+                      type="button"
+                    >
+                      Reels
+                    </button>
+                  </div>
+                  <span className="text-xs text-slate-500">
+                    {visiblePosts.length} {contentView === "posts" ? "Posts" : "Reels"}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {visiblePosts.map((post) => (
+                    <article key={post.id} className="rounded-2xl border border-[var(--line)] bg-white p-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold">{post.author}</p>
+                          <p className="text-xs text-slate-500">
+                            {post.location ? `${post.handle} - ${post.location}` : post.handle}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-[11px] text-slate-500">
+                            <LivePostAge
+                              createdAt={post.createdAt}
+                              initialLabel={post.timeAgo}
+                            />
+                          </span>
+                          <span className="rounded-full bg-[var(--brand-soft)] px-2 py-1 text-[11px]">
+                            {post.kind}
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className="post-media-frame mb-3"
+                        onDoubleClick={() => handlePostDoubleClick(post)}
+                      >
+                        <MediaPreview post={post} className="h-56 w-full rounded-xl" />
+                        {heartBurst?.postId === post.id ? (
+                          <div key={heartBurst.token} className="like-burst">
+                            <svg
+                              viewBox="0 0 64 64"
+                              className="like-burst-heart"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M32 55c-1.4 0-2.8-.5-4-1.5C20.7 47.2 8 36.7 8 22.9 8 14.7 14.3 9 22.3 9c4.1 0 8.1 1.8 10.7 4.9C35.6 10.8 39.6 9 43.7 9 51.7 9 58 14.7 58 22.9c0 13.8-12.7 24.3-20 30.6-1.2 1-2.6 1.5-4 1.5Z"
+                                fill="#e11d48"
+                                stroke="#111111"
+                                strokeWidth="4"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </div>
+                        ) : null}
+                      </div>
+                      <p className="text-sm text-slate-700">{post.caption}</p>
+                      <div className="mt-3 flex items-center justify-between gap-3 text-xs">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => void like(post.id)}
+                            className={`rounded-full border px-3 py-1 ${post.liked
                               ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                               : "border-[var(--line)]"
-                          }`}
-                          type="button"
-                        >
-                          Like {post.likes}
-                        </button>
+                              }`}
+                            type="button"
+                          >
+                            Like {post.likes}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void openComments(post.id)}
+                            className="rounded-full border border-[var(--line)] px-3 py-1"
+                          >
+                            Comments {post.comments}
+                          </button>
+                        </div>
                         <button
                           type="button"
-                          onClick={() => void openComments(post.id)}
-                          className="rounded-full border border-[var(--line)] px-3 py-1"
-                        >
-                          Comments {post.comments}
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => void toggleSave(post.id)}
-                        className={`grid h-9 w-9 place-items-center rounded-xl border ${
-                          post.saved
+                          onClick={() => void toggleSave(post.id)}
+                          className={`grid h-9 w-9 place-items-center rounded-xl border ${post.saved
                             ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                             : "border-[var(--line)] bg-white text-slate-600"
-                        }`}
-                        aria-label={post.saved ? "Remove from vault" : "Vault post"}
-                        title={post.saved ? "Vaulted" : "Vault"}
-                      >
-                        <SaveGlyph saved={post.saved} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
-                {visiblePosts.length === 0 ? (
-                  <p className="rounded-2xl border border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
-                    {contentView === "reels"
-                      ? "No reels yet."
-                      : "No posts yet."}
-                  </p>
-                ) : null}
-              </div>
-            </section>
-          </section>
-
-          <aside
-            ref={headerActionsRef}
-            className="motion-right-rail space-y-5 self-start xl:sticky xl:top-6"
-          >
-            <section className="motion-surface p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Theme</p>
-                  <p className="text-[11px] text-slate-500">Adjust the look without crowding the header.</p>
-                </div>
-                <ThemePicker
-                  selectedTheme={themeSelection}
-                  onThemeChange={setThemeSelection}
-                />
-              </div>
-            </section>
-
-            <section className="motion-surface p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Notifications</p>
-                  <p className="text-[11px] text-slate-500">Follows, likes, and comments.</p>
-                </div>
-                <button
-                  className="relative grid h-10 w-10 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-700"
-                  type="button"
-                  onClick={() => {
-                    setProfileMenuOpen(false);
-                    setNotificationsOpen((current) => !current);
-                  }}
-                  aria-label="Notifications"
-                  aria-expanded={notificationsOpen}
-                  title="Notifications"
-                >
-                  <svg
-                    viewBox="0 0 20 20"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M10 3.1a3.1 3.1 0 0 0-3.1 3.1v1.1c0 .7-.2 1.4-.6 2l-1.1 1.8c-.3.5 0 1.1.6 1.1h8.4c.6 0 .9-.6.6-1.1l-1.1-1.8c-.4-.6-.6-1.3-.6-2V6.2A3.1 3.1 0 0 0 10 3.1Z" />
-                    <path d="M8.5 14.7a1.8 1.8 0 0 0 3 0" />
-                  </svg>
-                  {notificationCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-white">
-                      {notificationCount}
-                    </span>
-                  ) : null}
-                </button>
-              </div>
-
-              {notificationsOpen ? (
-                <div className="mt-4 space-y-4">
-                  {unseenNotificationItems.length > 0 ? (
-                    <div>
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                          New
-                        </p>
-                        <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                          {unseenNotificationItems.length}
-                        </span>
+                            }`}
+                          aria-label={post.saved ? "Remove from vault" : "Vault post"}
+                          title={post.saved ? "Vaulted" : "Vault"}
+                        >
+                          <SaveGlyph saved={post.saved} />
+                        </button>
                       </div>
-                      <div className="space-y-2">
-                        {unseenNotificationItems.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className="w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-left"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                      notification.tone === "follow"
-                                        ? "bg-sky-100 text-sky-700"
-                                        : notification.tone === "like"
-                                          ? "bg-rose-100 text-rose-700"
-                                          : "bg-amber-100 text-amber-700"
-                                    }`}
-                                  >
-                                    {notification.title}
-                                  </span>
-                                </div>
-                                <p className="mt-0.5 break-words text-xs text-slate-500">
-                                  {notification.detail}
-                                </p>
-                              </div>
-                              <span className="shrink-0 text-[11px] text-slate-500">
-                                {notification.meta}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {earlierNotificationItems.length > 0 ? (
-                    <div>
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                          Earlier
-                        </p>
-                        <span className="text-[10px] text-slate-500">
-                          Already viewed
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {earlierNotificationItems.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className="w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2 text-left opacity-60"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                      notification.tone === "follow"
-                                        ? "bg-sky-100 text-sky-700"
-                                        : notification.tone === "like"
-                                          ? "bg-rose-100 text-rose-700"
-                                          : "bg-amber-100 text-amber-700"
-                                    }`}
-                                  >
-                                    {notification.title}
-                                  </span>
-                                </div>
-                                <p className="mt-0.5 break-words text-xs text-slate-500">
-                                  {notification.detail}
-                                </p>
-                              </div>
-                              <span className="shrink-0 text-[11px] text-slate-500">
-                                {notification.meta}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {notificationItems.length === 0 ? (
-                    <p className="rounded-2xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
-                      No notifications right now.
+                    </article>
+                  ))}
+                  {visiblePosts.length === 0 ? (
+                    <p className="rounded-2xl border border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
+                      {contentView === "reels"
+                        ? "No reels yet."
+                        : "No posts yet."}
                     </p>
                   ) : null}
                 </div>
-              ) : (
-                <p className="mt-4 rounded-2xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
-                  Keep this closed until you need it. The feed stays central and easier to scan.
-                </p>
-              )}
+              </section>
             </section>
-          </aside>
-        </div>
+
+            <aside
+              ref={headerActionsRef}
+              className="motion-right-rail space-y-5 self-start xl:sticky xl:top-6"
+            >
+              <section className="motion-surface p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Theme</p>
+                    <p className="text-[11px] text-slate-500">Adjust the look without crowding the header.</p>
+                  </div>
+                  <ThemePicker
+                    selectedTheme={themeSelection}
+                    onThemeChange={setThemeSelection}
+                  />
+                </div>
+              </section>
+
+              <section className="motion-surface p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Notifications</p>
+                    <p className="text-[11px] text-slate-500">Follows, likes, and comments.</p>
+                  </div>
+                  <button
+                    className="relative grid h-10 w-10 place-items-center rounded-xl border border-[var(--line)] bg-white text-slate-700"
+                    type="button"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      setNotificationsOpen((current) => !current);
+                    }}
+                    aria-label="Notifications"
+                    aria-expanded={notificationsOpen}
+                    title="Notifications"
+                  >
+                    <svg
+                      viewBox="0 0 20 20"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M10 3.1a3.1 3.1 0 0 0-3.1 3.1v1.1c0 .7-.2 1.4-.6 2l-1.1 1.8c-.3.5 0 1.1.6 1.1h8.4c.6 0 .9-.6.6-1.1l-1.1-1.8c-.4-.6-.6-1.3-.6-2V6.2A3.1 3.1 0 0 0 10 3.1Z" />
+                      <path d="M8.5 14.7a1.8 1.8 0 0 0 3 0" />
+                    </svg>
+                    {notificationCount > 0 ? (
+                      <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-white">
+                        {notificationCount}
+                      </span>
+                    ) : null}
+                  </button>
+                </div>
+
+                {notificationsOpen ? (
+                  <div className="mt-4 space-y-4">
+                    {unseenNotificationItems.length > 0 ? (
+                      <div>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                            New
+                          </p>
+                          <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                            {unseenNotificationItems.length}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {unseenNotificationItems.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className="w-full rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-left"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${notification.tone === "follow"
+                                        ? "bg-sky-100 text-sky-700"
+                                        : notification.tone === "like"
+                                          ? "bg-rose-100 text-rose-700"
+                                          : "bg-amber-100 text-amber-700"
+                                        }`}
+                                    >
+                                      {notification.title}
+                                    </span>
+                                  </div>
+                                  <p className="mt-0.5 break-words text-xs text-slate-500">
+                                    {notification.detail}
+                                  </p>
+                                </div>
+                                <span className="shrink-0 text-[11px] text-slate-500">
+                                  {notification.meta}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {earlierNotificationItems.length > 0 ? (
+                      <div>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                            Earlier
+                          </p>
+                          <span className="text-[10px] text-slate-500">
+                            Already viewed
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {earlierNotificationItems.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className="w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2 text-left opacity-60"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${notification.tone === "follow"
+                                        ? "bg-sky-100 text-sky-700"
+                                        : notification.tone === "like"
+                                          ? "bg-rose-100 text-rose-700"
+                                          : "bg-amber-100 text-amber-700"
+                                        }`}
+                                    >
+                                      {notification.title}
+                                    </span>
+                                  </div>
+                                  <p className="mt-0.5 break-words text-xs text-slate-500">
+                                    {notification.detail}
+                                  </p>
+                                </div>
+                                <span className="shrink-0 text-[11px] text-slate-500">
+                                  {notification.meta}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {notificationItems.length === 0 ? (
+                      <p className="rounded-2xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
+                        No notifications right now.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-4 rounded-2xl border border-[var(--line)] bg-white px-3 py-3 text-xs text-slate-500">
+                    Keep this closed until you need it. The feed stays central and easier to scan.
+                  </p>
+                )}
+              </section>
+            </aside>
+          </div>
         </main>
       </div>
+
+      <nav className="motion-bottom-nav md:hidden">
+        <button
+          type="button"
+          onClick={goHome}
+          className="bottom-nav-item"
+          aria-pressed={contentView === "posts" && !chatOpen}
+          aria-label="Home"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => router.push("/reels")}
+          className="bottom-nav-item"
+          aria-label="Reels"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+            <line x1="7" y1="2" x2="7" y2="22" />
+            <line x1="17" y1="2" x2="17" y2="22" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <line x1="2" y1="7" x2="7" y2="7" />
+            <line x1="2" y1="17" x2="7" y2="17" />
+            <line x1="17" y1="17" x2="22" y2="17" />
+            <line x1="17" y1="7" x2="22" y2="7" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={openChat}
+          className="bottom-nav-item relative"
+          aria-expanded={chatOpen}
+          aria-label="Messages"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
+          </svg>
+          {unread > 0 ? (
+            <span className="absolute right-3 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--brand)] text-[9px] font-bold text-white">
+              {unread}
+            </span>
+          ) : null}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => router.push("/explore")}
+          className="bottom-nav-item"
+          aria-label="Explore"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+          </svg>
+        </button>
+      </nav>
+
       {chatOpen ? (
-        <section className="chat-panel motion-surface p-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-slate-900">Messages</h2>
+        <section className="chat-panel motion-surface flex flex-col overflow-hidden p-0">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5 text-[var(--brand)]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
+              </svg>
+              <h2
+                className="text-base font-semibold text-slate-900"
+                style={{ fontFamily: "var(--font-heading)" }}
+              >
+                Messages
+              </h2>
               <div className="pulse-dot" />
             </div>
             <button
               type="button"
               onClick={() => setChatOpen(false)}
-              className="rounded-lg border border-[var(--line)] bg-white px-2 py-1 text-[11px] font-semibold text-slate-600"
+              className="grid h-8 w-8 place-items-center rounded-full border border-[var(--line)] bg-white text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+              aria-label="Close messages"
             >
-              Close
+              <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M5 5l10 10M15 5L5 15" />
+              </svg>
             </button>
           </div>
-          <div className="chat-scroll space-y-2">
-            {conversations.map((conversation) => (
-              <button
-                key={conversation.id}
-                onClick={() => setActiveId(conversation.id)}
-                className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left ${
-                  activeId === conversation.id
-                    ? "border-[var(--brand)] bg-[var(--brand-soft)]"
-                    : "border-[var(--line)] bg-white"
-                }`}
-                type="button"
-              >
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold">{conversation.name}</span>
-                  <span className="block truncate text-xs text-slate-500">
-                    {conversation.lastMessage}
+
+          {/* Conversations list */}
+          <div className="chat-scroll space-y-1.5 px-3 py-3">
+            {conversations.map((conversation) => {
+              const initials = conversation.name
+                .split(" ")
+                .map((part: string) => part[0])
+                .join("")
+                .slice(0, 2);
+              const gradients = [
+                "linear-gradient(135deg, #ff8f6b, #ff5f6d)",
+                "linear-gradient(135deg, #f6d365, #fda085)",
+                "linear-gradient(135deg, #96fbc4, #f9f586)",
+                "linear-gradient(135deg, #4facfe, #00f2fe)",
+                "linear-gradient(135deg, #ff9a9e, #fbc2eb)",
+                "linear-gradient(135deg, #84fab0, #8fd3f4)",
+              ];
+              const gradientIndex =
+                [...conversation.name].reduce((s, c) => s + c.charCodeAt(0), 0) % gradients.length;
+
+              return (
+                <button
+                  key={conversation.id}
+                  onClick={() => setActiveId(conversation.id)}
+                  className={`chat-convo-item ${activeId === conversation.id ? "is-active" : ""}`}
+                  type="button"
+                >
+                  <div
+                    className="chat-avatar"
+                    style={{ background: gradients[gradientIndex] }}
+                  >
+                    {initials}
+                  </div>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-semibold text-slate-900">
+                        {conversation.name}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-slate-500">
+                        {conversation.time}
+                      </span>
+                    </span>
+                    <span className="mt-0.5 flex items-center justify-between gap-2">
+                      <span className="block truncate text-xs text-slate-500">
+                        {conversation.lastMessage}
+                      </span>
+                      {conversation.unread > 0 ? (
+                        <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-white">
+                          {conversation.unread}
+                        </span>
+                      ) : null}
+                    </span>
                   </span>
-                </span>
-                <span className="ml-3 text-right text-xs text-slate-500">
-                  {conversation.unread > 0 ? conversation.unread : conversation.time}
-                </span>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
+
+          {/* Active thread */}
           {activeId ? (
-            <div className="mt-3 rounded-xl border border-[var(--line)] bg-white p-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <div>
+            <div className="flex flex-1 flex-col border-t border-[var(--line)]">
+              <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-slate-900">
                     {activeConversation?.name ?? "Conversation"}
                   </p>
-                  <p className="text-[11px] text-slate-500">
-                    {activeConversation?.status ?? "Active now"}
-                  </p>
+                  <span
+                    className={`h-2 w-2 rounded-full ${activeConversation?.status === "Online"
+                      ? "bg-emerald-400"
+                      : "bg-slate-300"
+                      }`}
+                  />
                 </div>
-                <span className="text-[11px] text-slate-500">
-                  {activeConversation?.time ?? ""}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveId(null)}
+                  className="text-[11px] font-semibold text-slate-500 transition hover:text-[var(--brand)]"
+                >
+                  Back
+                </button>
               </div>
-              <div className="chat-thread space-y-2">
+              <div className="chat-thread space-y-2 px-4 py-2">
                 {messages.map((message) => (
-                  <p
+                  <div
                     key={message.id}
-                    className={`w-fit max-w-[92%] rounded-xl px-3 py-2 text-xs ${
-                      message.from === "me"
-                        ? "ml-auto bg-[var(--brand)] text-white"
-                        : "bg-slate-100 text-slate-700"
-                    }`}
+                    className={`chat-bubble ${message.from === "me" ? "is-me" : "is-them"
+                      }`}
                   >
                     {message.text}
-                  </p>
+                  </div>
                 ))}
               </div>
-              <form onSubmit={send} className="mt-3 flex gap-2">
+              <form onSubmit={send} className="flex gap-2 border-t border-[var(--line)] px-3 py-2.5">
                 <input
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  className="h-9 flex-1 rounded-lg border border-[var(--line)] bg-white px-3 text-xs"
-                  placeholder="Send a message..."
+                  className="h-9 flex-1 rounded-full border border-[var(--line)] bg-white px-4 text-xs transition focus:border-[var(--brand)] focus:outline-none"
+                  placeholder="Type a message..."
                 />
                 <button
-                  className="h-9 rounded-lg bg-[var(--brand)] px-3 text-xs font-semibold text-white"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-white transition hover:brightness-110"
                   type="submit"
+                  aria-label="Send message"
                 >
-                  Send
+                  <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 2 9 11" />
+                    <path d="m18 2-7 18-3-8-8-3z" />
+                  </svg>
                 </button>
               </form>
             </div>

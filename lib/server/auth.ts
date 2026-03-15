@@ -31,6 +31,8 @@ export function toPublicUser(user: UserRecord): PublicUser {
     role: user.role,
     email: user.email,
     avatarGradient: user.avatarGradient,
+    avatarUrl: user.avatarUrl,
+    bio: user.bio,
   };
 }
 

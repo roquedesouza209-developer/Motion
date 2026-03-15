@@ -1,4 +1,5 @@
 export type FeedScope = "following" | "discover";
+export type FeedVisibility = "everyone" | "followers" | "non_followers" | "custom";
 export type PostKind = "Photo" | "Reel";
 export type Presence = "Online" | "Away";
 export type MediaItem = {
@@ -15,6 +16,10 @@ export type UserRecord = {
   passwordHash: string;
   passwordSalt: string;
   avatarGradient: string;
+  avatarUrl?: string;
+  bio?: string;
+  feedVisibility?: FeedVisibility;
+  hiddenFromIds?: string[];
   createdAt: string;
 };
 
@@ -40,6 +45,7 @@ export type PostRecord = {
   savedBy: string[];
   commentCount: number;
   createdAt: string;
+  deletedAt?: string;
 };
 
 export type StoryRecord = {
@@ -96,7 +102,7 @@ export type MotionDb = {
 
 export type PublicUser = Pick<
   UserRecord,
-  "id" | "name" | "handle" | "role" | "email" | "avatarGradient"
+  "id" | "name" | "handle" | "role" | "email" | "avatarGradient" | "avatarUrl" | "bio" | "feedVisibility" | "hiddenFromIds"
 >;
 
 export type PostDto = {
@@ -118,6 +124,7 @@ export type PostDto = {
   media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
+  deletedAt?: string;
 };
 
 export type StoryDto = {

@@ -142,6 +142,7 @@ export function mapPostToDto({
     media,
     mediaUrl: post.mediaUrl ?? primary?.url,
     mediaType: post.mediaType ?? primary?.type,
+    deletedAt: post.deletedAt,
   };
 }
 
