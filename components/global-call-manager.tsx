@@ -10,10 +10,13 @@ import {
   type MotionCallStateDetail,
   type MotionStartCallDetail,
 } from "@/lib/call-events";
-import type { CallMode, CallSessionDto, CallSignalDto } from "@/lib/server/types";
+import type { CallMode, CallSessionDto, CallSignalDto, ChatAttachment } from "@/lib/server/types";
 
 type CallSession = CallSessionDto;
 type CallSignal = CallSignalDto;
+type ChatUploadResponse = {
+  attachment: ChatAttachment;
+};
 type CallQuality = "auto" | "hd" | "data_saver";
 type NetworkQuality = "excellent" | "good" | "fair" | "poor" | "unknown";
 type CallToast = {
@@ -485,6 +488,66 @@ export default function GlobalCallManager() {
     anchor.remove();
     window.setTimeout(() => URL.revokeObjectURL(href), 1_000);
   }, []);
+
+  const saveRecordingToConversation = useCallback(
+    async ({
+      blob,
+      mimeType,
+      conversationId,
+      durationMs,
+      hasVideoTrack,
+    }: {
+      blob: Blob;
+      mimeType: string;
+      conversationId: string;
+      durationMs?: number;
+      hasVideoTrack: boolean;
+    }) => {
+      const extension = mimeType.startsWith("audio/") ? "webm" : "webm";
+      const file = new File(
+        [blob],
+        `motion-call-recording-${new Date().toISOString().replace(/[:.]/g, "-")}.${extension}`,
+        { type: mimeType },
+      );
+      const formData = new FormData();
+      formData.append("file", file);
+
+      if (typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs > 0) {
+        formData.append("durationMs", String(Math.round(durationMs)));
+      }
+
+      try {
+        const upload = await req<ChatUploadResponse>("/api/messages/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        await req<Record<string, unknown>>(`/api/messages/${conversationId}`, {
+          method: "POST",
+          body: JSON.stringify({
+            text: hasVideoTrack ? "Call recording" : "Voice call recording",
+            attachment: upload.attachment,
+          }),
+        });
+
+        window.dispatchEvent(
+          new CustomEvent<MotionCallStateDetail>(MOTION_CALL_STATE_EVENT, {
+            detail: {
+              session: currentCallRef.current,
+              statusLabel: "",
+              busy: false,
+              error: null,
+              conversationId,
+            },
+          }),
+        );
+      } catch (error) {
+        downloadRecordingBlob(blob, mimeType);
+        throw error;
+      }
+    },
+    [downloadRecordingBlob],
+  );
 
   const ensureAudioContextForRecording = useCallback(async () => {
     if (typeof window === "undefined") {
@@ -1435,8 +1498,10 @@ export default function GlobalCallManager() {
   const stopCallRecording = useCallback(
     async ({ syncRemote = true }: { syncRemote?: boolean } = {}) => {
       const recorder = mediaRecorderRef.current;
+      const waitingForRecorderStop = Boolean(recorder && recorder.state !== "inactive");
+      setCallRecordingBusy(true);
 
-      if (recorder && recorder.state !== "inactive") {
+      if (waitingForRecorderStop && recorder) {
         recorder.stop();
       } else if (recordingCleanupRef.current) {
         recordingCleanupRef.current();
@@ -1457,6 +1522,10 @@ export default function GlobalCallManager() {
         } catch {
           // Ignore transient recording sync errors.
         }
+      }
+
+      if (!waitingForRecorderStop) {
+        setCallRecordingBusy(false);
       }
     },
     [currentCall, postCallAction],
@@ -1493,22 +1562,41 @@ export default function GlobalCallManager() {
       };
 
       recorder.onstop = () => {
+        const recordingMimeType =
+          mimeType || recorder.mimeType || (hasVideoTrack ? "video/webm" : "audio/webm");
         const blob = new Blob(recordingChunksRef.current, {
-          type: mimeType || recorder.mimeType || (hasVideoTrack ? "video/webm" : "audio/webm"),
+          type: recordingMimeType,
         });
+        const durationMs = currentCall.answeredAt
+          ? Math.max(0, Date.now() - new Date(currentCall.answeredAt).getTime())
+          : undefined;
 
         recordingChunksRef.current = [];
 
-        if (blob.size > 0) {
-          downloadRecordingBlob(
-            blob,
-            mimeType || recorder.mimeType || (hasVideoTrack ? "video/webm" : "audio/webm"),
-          );
-        }
-
-        recordingCleanupRef.current?.();
-        recordingCleanupRef.current = null;
-        mediaRecorderRef.current = null;
+        void (async () => {
+          try {
+            if (blob.size > 0) {
+              await saveRecordingToConversation({
+                blob,
+                mimeType: recordingMimeType,
+                conversationId: currentCall.conversationId,
+                durationMs,
+                hasVideoTrack,
+              });
+            }
+          } catch (recordingSaveError) {
+            setCallError(
+              recordingSaveError instanceof Error
+                ? `${recordingSaveError.message} Recording was downloaded locally instead.`
+                : "Motion could not save the recording, so it was downloaded locally instead.",
+            );
+          } finally {
+            recordingCleanupRef.current?.();
+            recordingCleanupRef.current = null;
+            mediaRecorderRef.current = null;
+            setCallRecordingBusy(false);
+          }
+        })();
       };
 
       recorder.start(1_000);
@@ -1537,7 +1625,7 @@ export default function GlobalCallManager() {
     } finally {
       setCallRecordingBusy(false);
     }
-  }, [buildCallRecordingStream, currentCall, downloadRecordingBlob, postCallAction]);
+  }, [buildCallRecordingStream, currentCall, postCallAction, saveRecordingToConversation]);
 
   const currentCallStatusLabel = useMemo(() => {
     if (!currentCall) {

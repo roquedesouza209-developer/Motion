@@ -508,6 +508,11 @@ export default function ChatCallOverlay({
                 {session.isGroup ? <span className="rounded-full border border-white/15 bg-white/6 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">{remoteParticipants.length + 1} people</span> : null}
               </div>
               <p className="mt-1 text-xs text-white/70">{statusLabel}</p>
+              {anyRecording ? (
+                <p className="mt-2 rounded-2xl border border-rose-300/25 bg-rose-500/10 px-3 py-2 text-[11px] font-medium text-rose-100">
+                  This call is being recorded. Staying in the call means everyone can review it later in Messages.
+                </p>
+              ) : null}
               {liveDurationLabel ? <p className="mt-1 text-[11px] font-semibold text-cyan-100">{liveDurationLabel}</p> : null}
             </div>
             <button type="button" onClick={onRestore} className="grid h-10 w-10 place-items-center rounded-2xl border border-white/15 bg-white/6 text-white transition hover:scale-[1.03]" aria-label="Restore call" title="Restore call">
@@ -587,6 +592,20 @@ export default function ChatCallOverlay({
             <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70 backdrop-blur-xl">{liveDurationLabel ?? (remoteParticipant?.joined ? "Connected" : "Ringing")}</div>
           </div>
         </div>
+
+        {anyRecording ? (
+          <div className="mt-5 rounded-[26px] border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-50 shadow-[0_18px_50px_-32px_rgba(244,63,94,0.8)] backdrop-blur-xl">
+            <div className="flex items-start gap-3">
+              <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-rose-400 shadow-[0_0_0_6px_rgba(251,113,133,0.14)]" />
+              <div>
+                <p className="font-semibold">This call is being recorded</p>
+                <p className="mt-1 text-sm text-rose-100/85">
+                  Everyone in the call can see this indicator, and the finished recording will be saved in Messages for later playback.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-6 flex min-h-0 flex-1 flex-col gap-4">
           {showVideoStage ? (

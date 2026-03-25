@@ -59,6 +59,7 @@ type Post = {
   interests?: InterestKey[];
   mediaUrl?: string;
   mediaType?: MediaType;
+  immersiveVideo?: boolean;
 };
 
 const DISCOVERY_TAGS = [
@@ -223,11 +224,20 @@ function ExploreTile({
         <div className="absolute left-3 top-3 rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
           {post.kind}
         </div>
+        {post.immersiveVideo ? (
+          <div className="absolute left-3 top-10 rounded-full bg-cyan-400/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100 backdrop-blur-sm">
+            360
+          </div>
+        ) : null}
         <div className="absolute right-3 top-3 rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
           <LivePostAge createdAt={post.createdAt} initialLabel={post.timeAgo} />
         </div>
         {featured ? (
-          <div className="absolute left-3 top-10 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-slate-900 backdrop-blur-sm">
+          <div
+            className={`absolute left-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-slate-900 backdrop-blur-sm ${
+              post.immersiveVideo ? "top-[4.3rem]" : "top-10"
+            }`}
+          >
             Featured
           </div>
         ) : null}
@@ -305,6 +315,11 @@ function TrendingCard({
         <div className="absolute left-2 top-2 rounded-full bg-black/40 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
           {post.kind}
         </div>
+        {post.immersiveVideo ? (
+          <div className="absolute left-2 top-9 rounded-full bg-cyan-400/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100 backdrop-blur-sm">
+            360
+          </div>
+        ) : null}
         <div className="absolute right-2 top-2 rounded-full bg-black/40 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
           <LivePostAge createdAt={post.createdAt} initialLabel={post.timeAgo} />
         </div>

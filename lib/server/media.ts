@@ -65,6 +65,10 @@ function classifyChatAttachmentType(mimeType: string): ChatAttachmentType | null
     return "image";
   }
 
+  if (VIDEO_TYPES.has(mimeType)) {
+    return "video";
+  }
+
   if (AUDIO_TYPES.has(mimeType)) {
     return "audio";
   }
@@ -142,11 +146,17 @@ export async function storeUploadedChatMedia({
   const mediaType = classifyChatAttachmentType(file.type);
 
   if (!mediaType) {
-    throw new Error("Unsupported chat file type. Use JPG, PNG, WEBP, GIF, WEBM, OGG, M4A, or MP3.");
+    throw new Error(
+      "Unsupported chat file type. Use JPG, PNG, WEBP, GIF, MP4, WEBM, MOV, OGG, M4A, or MP3.",
+    );
   }
 
   if (mediaType === "image" && file.size > MAX_IMAGE_BYTES) {
     throw new Error("Chat photos must be 10MB or smaller.");
+  }
+
+  if (mediaType === "video" && file.size > MAX_VIDEO_BYTES) {
+    throw new Error("Chat videos must be 200MB or smaller.");
   }
 
   if (mediaType === "audio" && file.size > MAX_AUDIO_BYTES) {
@@ -167,4 +177,21 @@ export async function storeUploadedChatMedia({
     mimeType: file.type,
     name: file.name,
   };
+}
+
+export async function deleteUploadedMedia(mediaUrl: string): Promise<void> {
+  if (!mediaUrl.startsWith("/uploads/")) {
+    throw new Error("Only Motion uploads can be deleted.");
+  }
+
+  const filename = path.basename(mediaUrl);
+  const filePath = path.join(UPLOAD_DIRECTORY, filename);
+
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
 }

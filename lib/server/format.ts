@@ -1,6 +1,10 @@
 import type {
   CallSessionDto,
   CallSessionRecord,
+  RandomChatQueueDto,
+  RandomChatQueueRecord,
+  RandomChatSessionDto,
+  RandomChatSessionRecord,
   ChatAttachment,
   CommentDto,
   CommentRecord,
@@ -14,6 +18,7 @@ import type {
   StoryRecord,
   UserRecord,
 } from "@/lib/server/types";
+import { getSharedRandomChatInterests } from "@/lib/server/random-chat";
 
 const PRESENCE_WINDOW_MS = 5 * 60_000;
 const TYPING_WINDOW_MS = 7_000;
@@ -133,17 +138,26 @@ function resolveMedia({
   media,
   mediaUrl,
   mediaType,
+  immersiveVideo,
 }: {
   media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
+  immersiveVideo?: boolean;
 }): MediaItem[] | undefined {
   if (Array.isArray(media) && media.length > 0) {
     return media;
   }
 
   if (mediaUrl && mediaType) {
-    return [{ url: mediaUrl, type: mediaType }];
+    return [
+      {
+        url: mediaUrl,
+        type: mediaType,
+        immersive: mediaType === "video" ? immersiveVideo : undefined,
+        hotspots: undefined,
+      },
+    ];
   }
 
   return undefined;
@@ -223,11 +237,21 @@ export function summarizeConversationMessage({
   const prefix = message.senderId === currentUserId ? "You: " : "";
 
   if (message.attachment?.type === "audio") {
+    if (message.attachment.name?.startsWith("motion-call-recording-")) {
+      return `${prefix}Call recording`;
+    }
     return `${prefix}Voice message`;
   }
 
   if (message.attachment?.type === "image") {
     return message.text ? `${prefix}${message.text}` : `${prefix}Photo`;
+  }
+
+  if (message.attachment?.type === "video") {
+    if (message.attachment.name?.startsWith("motion-call-recording-")) {
+      return `${prefix}Call recording`;
+    }
+    return message.text ? `${prefix}${message.text}` : `${prefix}Video`;
   }
 
   return message.text || `${prefix}Message`;
@@ -351,6 +375,95 @@ export function mapCallSessionToDto({
   };
 }
 
+export function mapRandomChatQueueToDto(
+  queue: RandomChatQueueRecord,
+): RandomChatQueueDto {
+  return {
+    id: queue.id,
+    country: queue.country,
+    preferredCountry: queue.preferredCountry,
+    preferredInterests: queue.preferredInterests,
+    createdAt: queue.createdAt,
+    updatedAt: queue.updatedAt,
+  };
+}
+
+export function mapRandomChatSessionToDto({
+  session,
+  usersById,
+  currentUserId,
+}: {
+  session: RandomChatSessionRecord;
+  usersById: Map<string, UserRecord>;
+  currentUserId: string;
+}): RandomChatSessionDto {
+  const currentUser = usersById.get(currentUserId) ?? null;
+  const otherParticipant =
+    session.participants.find((participant) => participant.userId !== currentUserId) ??
+    session.participants[0];
+
+  const participants = session.participants.map((participant) => {
+    const user = usersById.get(participant.userId);
+
+    return {
+      userId: participant.userId,
+      name: user?.name ?? "Motion member",
+      avatarGradient:
+        user?.avatarGradient ?? "linear-gradient(135deg, #4facfe, #00f2fe)",
+      avatarUrl: user?.avatarUrl,
+      country: participant.country,
+      interests: participant.interests ?? user?.interests ?? [],
+      sharedInterests: getSharedRandomChatInterests({
+        currentUser,
+        participant,
+      }),
+      audioEnabled: participant.audioEnabled,
+      videoEnabled: participant.videoEnabled,
+      joined: Boolean(participant.joinedAt),
+    };
+  });
+
+  const fallbackParticipant = participants[0] ?? {
+    userId: currentUserId,
+    name: "Motion member",
+    avatarGradient: "linear-gradient(135deg, #4facfe, #00f2fe)",
+    avatarUrl: undefined,
+    country: undefined,
+    interests: [],
+    sharedInterests: [],
+    audioEnabled: true,
+    videoEnabled: true,
+    joined: false,
+  };
+
+  const otherUser =
+    participants.find((participant) => participant.userId === otherParticipant?.userId) ??
+    participants.find((participant) => participant.userId !== currentUserId) ??
+    fallbackParticipant;
+
+  return {
+    id: session.id,
+    currentUserId,
+    status: session.status,
+    createdAt: session.createdAt,
+    matchedAt: session.matchedAt,
+    updatedAt: session.updatedAt,
+    endedAt: session.endedAt,
+    endedReason: session.endedReason,
+    isInitiator: session.initiatorId === currentUserId,
+    otherUser,
+    participants,
+    signals: session.signals.map((signal) => ({
+      id: signal.id,
+      fromUserId: signal.fromUserId,
+      toUserId: signal.toUserId,
+      type: signal.type,
+      payload: signal.payload,
+      createdAt: signal.createdAt,
+    })),
+  };
+}
+
 export function mapPostToDto({
   post,
   usersById,
@@ -397,6 +510,7 @@ export function mapPostToDto({
     media: post.media,
     mediaUrl: post.mediaUrl,
     mediaType: post.mediaType,
+    immersiveVideo: post.immersiveVideo,
   });
   const primary = media?.[0];
 
@@ -424,6 +538,8 @@ export function mapPostToDto({
     media,
     mediaUrl: post.mediaUrl ?? primary?.url,
     mediaType: post.mediaType ?? primary?.type,
+    immersiveVideo:
+      post.immersiveVideo ?? (primary?.type === "video" ? Boolean(primary.immersive) : undefined),
     deletedAt: post.deletedAt,
     archivedAt: post.archivedAt,
   };

@@ -6,7 +6,13 @@ import { createId } from "@/lib/server/crypto";
 import { readDb, updateDb } from "@/lib/server/database";
 import { isPostReleased, mapPostToDto } from "@/lib/server/format";
 import { rankDiscoverPosts } from "@/lib/server/ranking";
-import type { FeedScope, MediaItem, PostKind, PostRecord } from "@/lib/server/types";
+import type {
+  FeedScope,
+  ImmersiveHotspot,
+  MediaItem,
+  PostKind,
+  PostRecord,
+} from "@/lib/server/types";
 import { extractHashtags, normalizeHashtag } from "@/lib/hashtags";
 
 type CreatePostBody = {
@@ -18,6 +24,7 @@ type CreatePostBody = {
   media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
+  immersiveVideo?: boolean;
   visibleAt?: string;
   coAuthorHandle?: string;
   interests?: string[];
@@ -66,12 +73,61 @@ function normalizeMediaItems({
   media,
   mediaUrl,
   mediaType,
+  immersiveVideo,
 }: {
   media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
+  immersiveVideo?: boolean;
 }): { items?: MediaItem[]; error?: string } {
   const items: MediaItem[] = [];
+
+  const normalizeHotspots = (input: unknown): ImmersiveHotspot[] | undefined => {
+    type NormalizedHotspot = ImmersiveHotspot;
+
+    if (!Array.isArray(input)) {
+      return undefined;
+    }
+
+    const normalized = input
+      .map((entry): NormalizedHotspot | null => {
+        if (!entry || typeof entry !== "object") {
+          return null;
+        }
+
+        const candidate = entry as Partial<ImmersiveHotspot>;
+        const title = typeof candidate.title === "string" ? candidate.title.trim() : "";
+        if (!title) {
+          return null;
+        }
+
+        const yaw =
+          typeof candidate.yaw === "number" && Number.isFinite(candidate.yaw)
+            ? Math.max(-180, Math.min(180, candidate.yaw))
+            : 0;
+        const pitch =
+          typeof candidate.pitch === "number" && Number.isFinite(candidate.pitch)
+            ? Math.max(-45, Math.min(45, candidate.pitch))
+            : 0;
+
+        return {
+          id:
+            typeof candidate.id === "string" && candidate.id.trim()
+              ? candidate.id.trim()
+              : createId("hst"),
+          title,
+          detail:
+            typeof candidate.detail === "string" && candidate.detail.trim()
+              ? candidate.detail.trim()
+              : undefined,
+          yaw,
+          pitch,
+        };
+      })
+      .filter((entry): entry is NormalizedHotspot => entry !== null);
+
+    return normalized.length > 0 ? normalized.slice(0, 6) : undefined;
+  };
 
   if (Array.isArray(media)) {
     for (const entry of media) {
@@ -80,12 +136,19 @@ function normalizeMediaItems({
       }
       const url = (entry as MediaItem).url;
       const type = (entry as MediaItem).type;
+      const immersive = (entry as MediaItem).immersive;
+      const hotspots = normalizeHotspots((entry as MediaItem).hotspots);
 
       if (typeof url !== "string" || (type !== "image" && type !== "video")) {
         return { error: "media items must include url and type." };
       }
 
-      items.push({ url, type });
+      items.push({
+        url,
+        type,
+        immersive: type === "video" && typeof immersive === "boolean" ? immersive : undefined,
+        hotspots: type === "video" ? hotspots : undefined,
+      });
     }
   }
 
@@ -93,7 +156,15 @@ function normalizeMediaItems({
     if (!mediaType) {
       return { error: "mediaType is required when mediaUrl is provided." };
     }
-    items.push({ url: mediaUrl, type: mediaType });
+    items.push({
+      url: mediaUrl,
+      type: mediaType,
+      immersive:
+        mediaType === "video" && typeof immersiveVideo === "boolean"
+          ? immersiveVideo
+          : undefined,
+      hotspots: undefined,
+    });
   }
 
   return { items: items.length > 0 ? items : undefined };
@@ -258,6 +329,7 @@ export async function POST(request: Request) {
     media: body.media,
     mediaUrl,
     mediaType,
+    immersiveVideo: body.immersiveVideo,
   });
 
   if (caption.length < 8) {
@@ -343,6 +415,8 @@ export async function POST(request: Request) {
       media: mediaItems,
       mediaUrl: primaryMedia?.url,
       mediaType: primaryMedia?.type,
+      immersiveVideo:
+        primaryMedia?.type === "video" ? Boolean(primaryMedia.immersive) : undefined,
       likedBy: [user.id],
       savedBy: [],
       commentCount: 0,

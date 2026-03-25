@@ -5,7 +5,7 @@ import type { FormEvent, RefObject } from "react";
 import Image from "next/image";
 
 type Presence = "Online" | "Away";
-type MessagePanelTab = "chats" | "calls";
+type MessagePanelTab = "chats" | "calls" | "recordings";
 type CallTypeFilter = "all" | "voice" | "video";
 type CallDirectionFilter = "all" | "incoming" | "outgoing" | "missed";
 
@@ -19,6 +19,8 @@ type Conversation = {
   lastMessage: string;
   typing: boolean;
   missedCallCount: number;
+  hasRecordingHistory: boolean;
+  recordingCount: number;
   hasVoiceCallHistory: boolean;
   hasVideoCallHistory: boolean;
   hasIncomingCallHistory: boolean;
@@ -29,8 +31,10 @@ type Conversation = {
 
 type ChatAttachment = {
   url: string;
-  type: "image" | "audio";
+  type: "image" | "audio" | "video";
   durationMs?: number;
+  mimeType?: string;
+  name?: string;
 };
 
 type MessageReaction = {
@@ -100,6 +104,10 @@ type ChatPanelProps = {
   onStartVoiceCall: () => void;
   onStartVideoCall: () => void;
   onOpenGroupVideoCall?: () => void;
+  onDeleteRecording?: (messageId: string) => void;
+  deletingRecordingId?: string | null;
+  onDeleteAllRecordings?: () => void;
+  deletingAllRecordings?: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   formatChatTime: (value: string) => string;
   formatVoiceDuration: (durationMs?: number) => string;
@@ -159,6 +167,10 @@ function formatCallDuration(durationMs?: number): string | null {
   }
 
   return `${seconds}s`;
+}
+
+function isCallRecordingAttachment(attachment?: ChatAttachment): boolean {
+  return Boolean(attachment?.name?.startsWith("motion-call-recording-"));
 }
 
 function CallLogIcon({
@@ -237,7 +249,7 @@ export default function ChatPanel({
   variant = "floating",
   title = "Messages",
   searchPlaceholder = "Search threads...",
-  availableTabs = ["chats", "calls"],
+  availableTabs = ["chats", "calls", "recordings"],
   chatSearch,
   messageTab,
   callTypeFilter,
@@ -277,6 +289,10 @@ export default function ChatPanel({
   onStartVoiceCall,
   onStartVideoCall,
   onOpenGroupVideoCall,
+  onDeleteRecording,
+  deletingRecordingId = null,
+  onDeleteAllRecordings,
+  deletingAllRecordings = false,
   onSubmit,
   formatChatTime,
   formatVoiceDuration,
@@ -287,8 +303,15 @@ export default function ChatPanel({
 
   const threadMessages =
     messageTab === "calls"
-      ? messages.filter((message) => message.systemType === "call")
+      ? messages.filter(
+          (message) =>
+            message.systemType === "call" ||
+            isCallRecordingAttachment(message.attachment),
+        )
+      : messageTab === "recordings"
+        ? messages.filter((message) => isCallRecordingAttachment(message.attachment))
       : messages;
+  const activeRecordingCount = activeConversation?.recordingCount ?? 0;
 
   return (
     <section
@@ -352,7 +375,12 @@ export default function ChatPanel({
           {availableTabs.length > 1 ? (
             <div className="flex items-center gap-2 px-4 pb-3">
               {availableTabs.map((tabId) => {
-                const label = tabId === "calls" ? "Calls" : "Chats";
+                const label =
+                  tabId === "calls"
+                    ? "Calls"
+                    : tabId === "recordings"
+                      ? "Recordings"
+                      : "Chats";
                 return (
                   <button
                     key={tabId}
@@ -455,6 +483,12 @@ export default function ChatPanel({
                 ))}
               </div>
             </>
+          ) : messageTab === "recordings" ? (
+            <div className="px-4 pb-3">
+              <div className="rounded-2xl border border-[var(--line)] bg-white px-3.5 py-3 text-[11px] text-slate-500">
+                Saved call recordings live in their original thread so you can replay, download, or remove them later.
+              </div>
+            </div>
           ) : null}
 
           <div className="chat-list">
@@ -528,6 +562,18 @@ export default function ChatPanel({
                               {conversation.lastCallMode === "video" ? "Video" : "Voice"}
                             </span>
                           ) : null}
+                          {messageTab === "recordings" && conversation.hasRecordingHistory ? (
+                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
+                              {conversation.recordingCount} recording
+                              {conversation.recordingCount === 1 ? "" : "s"}
+                            </span>
+                          ) : null}
+                          {messageTab !== "recordings" &&
+                          conversation.recordingCount > 0 ? (
+                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
+                              {conversation.recordingCount}
+                            </span>
+                          ) : null}
                         </span>
                       </span>
                       <span className="flex shrink-0 flex-col items-end gap-1">
@@ -548,6 +594,10 @@ export default function ChatPanel({
                   ? chatSearch || callDirectionFilter !== "all" || callTypeFilter !== "all"
                     ? "No call logs match that search or filter."
                     : "No call history yet."
+                  : messageTab === "recordings"
+                    ? chatSearch
+                      ? "No recording threads match that search."
+                      : "No saved call recordings yet."
                   : chatSearch
                     ? "No threads match that search."
                     : "No threads yet."}
@@ -583,10 +633,28 @@ export default function ChatPanel({
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
+                  {activeRecordingCount > 0 ? (
+                    <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-600">
+                      {activeRecordingCount} recording
+                      {activeRecordingCount === 1 ? "" : "s"}
+                    </span>
+                  ) : null}
                   {callStatusLabel ? (
                     <span className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--brand)]">
                       {callStatusLabel}
                     </span>
+                  ) : null}
+                  {messageTab === "recordings" && activeRecordingCount > 0 && onDeleteAllRecordings ? (
+                    <button
+                      type="button"
+                      onClick={onDeleteAllRecordings}
+                      disabled={deletingAllRecordings}
+                      className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-600 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {deletingAllRecordings
+                        ? "Removing..."
+                        : `Delete all (${activeRecordingCount})`}
+                    </button>
                   ) : null}
                   <button
                     type="button"
@@ -693,6 +761,12 @@ export default function ChatPanel({
                     <div
                       className={`chat-bubble ${message.from === "me" ? "is-me" : "is-them"}`}
                     >
+                      {isCallRecordingAttachment(message.attachment) ? (
+                        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-600">
+                          <span className="h-2 w-2 rounded-full bg-rose-500" />
+                          <span>Call recording</span>
+                        </div>
+                      ) : null}
                       {message.attachment?.type === "image" ? (
                         <button
                           type="button"
@@ -709,6 +783,16 @@ export default function ChatPanel({
                             className="h-auto w-[220px] max-w-full rounded-2xl object-cover"
                           />
                         </button>
+                      ) : null}
+                      {message.attachment?.type === "video" ? (
+                        <div className="mb-2 overflow-hidden rounded-2xl bg-slate-950">
+                          <video
+                            controls
+                            preload="metadata"
+                            src={message.attachment.url}
+                            className="h-auto w-[240px] max-w-full rounded-2xl bg-black"
+                          />
+                        </div>
                       ) : null}
                       {message.attachment?.type === "audio" ? (
                         <div className="chat-voice-note">
@@ -735,12 +819,38 @@ export default function ChatPanel({
                               preload="metadata"
                             />
                             <p className="mt-1 text-[10px] opacity-75">
-                              {formatVoiceDuration(message.attachment.durationMs)} voice message
+                              {formatVoiceDuration(message.attachment.durationMs)}{" "}
+                              {isCallRecordingAttachment(message.attachment)
+                                ? "call recording"
+                                : "voice message"}
                             </p>
                           </div>
                         </div>
                       ) : null}
                       {message.text ? <p>{message.text}</p> : null}
+                      {isCallRecordingAttachment(message.attachment) ? (
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <a
+                            href={message.attachment?.url}
+                            download={message.attachment?.name ?? `motion-recording-${message.id}.webm`}
+                            className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[10px] font-semibold text-slate-600 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                          >
+                            Download
+                          </a>
+                          {onDeleteRecording ? (
+                            <button
+                              type="button"
+                              onClick={() => onDeleteRecording(message.id)}
+                              disabled={deletingRecordingId === message.id}
+                              className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[10px] font-semibold text-rose-600 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {deletingRecordingId === message.id
+                                ? "Removing..."
+                                : "Delete"}
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <div
                         className={`mt-2 flex items-center gap-1.5 text-[10px] ${
                           message.from === "me" ? "text-white/80" : "text-slate-500"
@@ -804,9 +914,12 @@ export default function ChatPanel({
                   </div>
                   )
                 ))}
-                {messageTab === "calls" && threadMessages.length === 0 ? (
+                {(messageTab === "calls" || messageTab === "recordings") &&
+                threadMessages.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
-                    No call history in this thread yet.
+                    {messageTab === "recordings"
+                      ? "No saved recordings in this thread yet."
+                      : "No call history or saved recordings in this thread yet."}
                   </div>
                 ) : null}
                 {messageTab === "chats" && activeConversation?.typing ? (
@@ -909,7 +1022,9 @@ export default function ChatPanel({
                 </form>
               ) : (
                 <div className="border-t border-[var(--line)] px-4 py-3 text-[11px] font-semibold text-slate-500">
-                  Call logs only. Switch back to Chats to send a message.
+                  {messageTab === "recordings"
+                    ? "Saved recordings only. Switch back to Chats to send a message."
+                    : "Call logs only. Switch back to Chats to send a message."}
                 </div>
               )}
               {messageTab === "chats" && (recording || chatUploading) ? (

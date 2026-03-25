@@ -5,6 +5,7 @@ import ChatPanel from "@/components/home/chat-panel";
 import AuthScreen from "@/components/home/auth-screen";
 import CreateContentModal from "@/components/home/create-content-modal";
 import FeedPostCard from "@/components/home/feed-post-card";
+import ImmersiveVideoViewer from "@/components/media/immersive-video-viewer";
 import MoveComposerModal from "@/components/home/move-composer-modal";
 import HomeRightRail from "@/components/home/right-rail";
 import UserAvatar from "@/components/user-avatar";
@@ -32,13 +33,21 @@ type MediaType = "image" | "video";
 type MediaItem = {
   url: string;
   type: MediaType;
+  immersive?: boolean;
+  hotspots?: {
+    id: string;
+    title: string;
+    detail?: string;
+    yaw: number;
+    pitch: number;
+  }[];
 };
 type ViewportMode = "desktop" | "tablet" | "mobile";
 type AuthMode = "signin" | "signup";
 type FeedInterestFilter = "all" | InterestKey;
 type CallTypeFilter = "all" | "voice" | "video";
 type CallDirectionFilter = "all" | "incoming" | "outgoing" | "missed";
-type MessagePanelTab = "chats" | "calls";
+type MessagePanelTab = "chats" | "calls" | "recordings";
 type ThemeSelection =
   | "system"
   | "light"
@@ -165,6 +174,15 @@ type Post = {
   media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: MediaType;
+  immersiveVideo?: boolean;
+};
+
+type ComposerHotspot = {
+  id: string;
+  title: string;
+  detail: string;
+  yaw: number;
+  pitch: number;
 };
 
 type Conversation = {
@@ -179,6 +197,8 @@ type Conversation = {
   lastMessage: string;
   typing: boolean;
   missedCallCount: number;
+  hasRecordingHistory: boolean;
+  recordingCount: number;
   hasVoiceCallHistory: boolean;
   hasVideoCallHistory: boolean;
   hasIncomingCallHistory: boolean;
@@ -235,7 +255,7 @@ type CallSession = {
 
 type ChatAttachment = {
   url: string;
-  type: "image" | "audio";
+  type: "image" | "audio" | "video";
   durationMs?: number;
   mimeType?: string;
   name?: string;
@@ -469,6 +489,16 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
+function createComposerHotspot(): ComposerHotspot {
+  return {
+    id: `hotspot-${Math.random().toString(36).slice(2, 10)}`,
+    title: "",
+    detail: "",
+    yaw: 0,
+    pitch: 0,
+  };
+}
+
 function resolveMediaItems({
   media,
   mediaUrl,
@@ -523,13 +553,25 @@ function MediaCarousel({ media, className }: { media: MediaItem[]; className: st
                 className="object-cover"
               />
             ) : (
-              <video
-                src={item.url}
-                className="h-full w-full object-cover"
-                controls
-                muted
-                preload="metadata"
-              />
+              item.immersive ? (
+                <ImmersiveVideoViewer
+                  src={item.url}
+                  hotspots={item.hotspots}
+                  className="h-full w-full"
+                  videoClassName="h-full w-full"
+                  controls
+                  muted
+                  preload="metadata"
+                />
+              ) : (
+                <video
+                  src={item.url}
+                  className="h-full w-full object-cover"
+                  controls
+                  muted
+                  preload="metadata"
+                />
+              )
             )}
           </div>
         ))}
@@ -574,13 +616,25 @@ function MediaPreview({ post, className }: { post: Post; className: string }) {
 
   if (mediaItems.length === 1 && mediaItems[0]?.type === "video") {
     return (
-      <video
-        src={mediaItems[0].url}
-        className={`${className} bg-black object-cover`}
-        controls
-        muted
-        preload="metadata"
-      />
+      mediaItems[0].immersive ? (
+        <ImmersiveVideoViewer
+          src={mediaItems[0].url}
+          hotspots={mediaItems[0].hotspots}
+          className={`${className} bg-black`}
+          videoClassName="h-full w-full"
+          controls
+          muted
+          preload="metadata"
+        />
+      ) : (
+        <video
+          src={mediaItems[0].url}
+          className={`${className} bg-black object-cover`}
+          controls
+          muted
+          preload="metadata"
+        />
+      )
     );
   }
 
@@ -1042,6 +1096,8 @@ export default function Home() {
   const [callDirectionFilter, setCallDirectionFilter] = useState<CallDirectionFilter>("all");
   const [messagePanelTab, setMessagePanelTab] = useState<MessagePanelTab>("chats");
   const [markingMissedCallsSeen, setMarkingMissedCallsSeen] = useState(false);
+  const [deletingRecordingId, setDeletingRecordingId] = useState<string | null>(null);
+  const [bulkDeletingRecordings, setBulkDeletingRecordings] = useState(false);
   const [chatUploading, setChatUploading] = useState(false);
   const [chatSending, setChatSending] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -1059,6 +1115,8 @@ export default function Home() {
   const [composerVisibleAt, setComposerVisibleAt] = useState("");
   const [coAuthorHandle, setCoAuthorHandle] = useState("");
   const [composerInterests, setComposerInterests] = useState<InterestKey[]>([]);
+  const [composerImmersiveVideo, setComposerImmersiveVideo] = useState(false);
+  const [composerHotspots, setComposerHotspots] = useState<ComposerHotspot[]>([]);
   const [liveTitle, setLiveTitle] = useState("");
   const [storyCaption, setStoryCaption] = useState("");
   const [storyPollQuestion, setStoryPollQuestion] = useState("");
@@ -2115,6 +2173,10 @@ export default function Home() {
         }
       }
 
+      if (messagePanelTab === "recordings" && !conversation.hasRecordingHistory) {
+        return false;
+      }
+
       if (messagePanelTab !== "calls") {
         return true;
       }
@@ -2142,6 +2204,19 @@ export default function Home() {
       return true;
     });
   }, [callDirectionFilter, callTypeFilter, chatSearch, conversations, messagePanelTab]);
+
+  useEffect(() => {
+    if (messagePanelTab === "chats" || filteredConversations.length === 0) {
+      return;
+    }
+
+    if (activeId && filteredConversations.some((conversation) => conversation.id === activeId)) {
+      return;
+    }
+
+    setActiveId(filteredConversations[0]?.id ?? null);
+  }, [activeId, filteredConversations, messagePanelTab]);
+
   const activeCommentsPost = useMemo(
     () => posts.find((post) => post.id === commentsPostId) ?? null,
     [commentsPostId, posts],
@@ -2293,6 +2368,8 @@ export default function Home() {
     setSharePostId(null);
     setActiveStoryId(null);
     setStoryComposerOpen(false);
+    setComposerImmersiveVideo(false);
+    setComposerHotspots([]);
     setComposerMode(mode);
     if (mode === "story") {
       setStoryKind("Photo");
@@ -2327,6 +2404,8 @@ export default function Home() {
     setSharePostId(null);
     setActiveStoryId(null);
     setComposerOpen(false);
+    setComposerImmersiveVideo(false);
+    setComposerHotspots([]);
     setComposerVisibleAt("");
     setCoAuthorHandle("");
     setStoryKind("Photo");
@@ -3283,6 +3362,88 @@ export default function Home() {
     }
   };
 
+  const deleteRecordingMessage = async (messageId: string) => {
+    if (!activeId || deletingRecordingId) {
+      return;
+    }
+
+    const confirmed =
+      typeof window === "undefined"
+        ? true
+        : window.confirm("Delete this saved call recording from the thread?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingRecordingId(messageId);
+    setError(null);
+
+    try {
+      await req<{ ok: boolean }>(`/api/messages/${activeId}/recordings/${messageId}`, {
+        method: "DELETE",
+      });
+      setMessages((current) => current.filter((message) => message.id !== messageId));
+      await loadConversations();
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Could not delete the recording.",
+      );
+    } finally {
+      setDeletingRecordingId(null);
+    }
+  };
+
+  const deleteAllRecordingsInThread = async () => {
+    if (!activeId || bulkDeletingRecordings) {
+      return;
+    }
+
+    const recordingTotal = activeConversation?.recordingCount ?? 0;
+    if (recordingTotal <= 0) {
+      return;
+    }
+
+    const confirmed =
+      typeof window === "undefined"
+        ? true
+        : window.confirm(
+            `Delete all ${recordingTotal} saved recording${
+              recordingTotal === 1 ? "" : "s"
+            } from this thread?`,
+          );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setBulkDeletingRecordings(true);
+    setError(null);
+
+    try {
+      await req<{ ok: boolean; deletedCount: number }>(`/api/messages/${activeId}/recordings`, {
+        method: "DELETE",
+      });
+      setMessages((current) =>
+        current.filter(
+          (message) =>
+            !message.attachment?.name?.startsWith("motion-call-recording-"),
+        ),
+      );
+      await loadConversations();
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Could not delete the recordings.",
+      );
+    } finally {
+      setBulkDeletingRecordings(false);
+    }
+  };
+
   const cancelVoiceRecording = () => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.ondataavailable = null;
@@ -3434,7 +3595,42 @@ export default function Home() {
     if (incoming.length === 0) {
       return;
     }
-    setComposerFiles((current) => mergeFiles(current, incoming));
+    setComposerFiles((current) => {
+      const merged = mergeFiles(current, incoming);
+      if (!merged.some((file) => file.type.startsWith("video/"))) {
+        setComposerImmersiveVideo(false);
+        setComposerHotspots([]);
+      }
+      return merged;
+    });
+  };
+
+  const addComposerHotspot = () => {
+    setComposerHotspots((current) =>
+      current.length >= 4 ? current : [...current, createComposerHotspot()],
+    );
+  };
+
+  const updateComposerHotspot = (
+    hotspotId: string,
+    patch: Partial<ComposerHotspot>,
+  ) => {
+    setComposerHotspots((current) =>
+      current.map((hotspot) =>
+        hotspot.id === hotspotId
+          ? {
+              ...hotspot,
+              ...patch,
+            }
+          : hotspot,
+      ),
+    );
+  };
+
+  const removeComposerHotspot = (hotspotId: string) => {
+    setComposerHotspots((current) =>
+      current.filter((hotspot) => hotspot.id !== hotspotId),
+    );
   };
 
   const addStoryFiles = (fileList: FileList | null) => {
@@ -3729,6 +3925,33 @@ export default function Home() {
       }
     }
 
+    const preparedHotspots = composerHotspots
+      .map((hotspot) => ({
+        ...hotspot,
+        title: hotspot.title.trim(),
+        detail: hotspot.detail.trim(),
+      }))
+      .filter((hotspot) => hotspot.title.length > 0)
+      .map((hotspot) => ({
+        id: hotspot.id,
+        title: hotspot.title,
+        detail: hotspot.detail || undefined,
+        yaw: hotspot.yaw,
+        pitch: hotspot.pitch,
+      }));
+
+    if (composerImmersiveVideo) {
+      const videoFiles =
+        composerMode === "reel"
+          ? composerFiles.slice(0, 1).filter((file) => file.type.startsWith("video/"))
+          : composerFiles.filter((file) => file.type.startsWith("video/"));
+
+      if (videoFiles.length !== 1 || composerFiles.some((file) => !file.type.startsWith("video/"))) {
+        setError("360 immersive posts currently support one video clip at a time.");
+        return;
+      }
+    }
+
     setPublishing(true);
     setError(null);
     setPublishNotice(null);
@@ -3752,6 +3975,8 @@ export default function Home() {
         setComposerVisibleAt("");
         setCoAuthorHandle("");
         setComposerInterests([]);
+        setComposerImmersiveVideo(false);
+        setComposerHotspots([]);
         setLiveTitle("");
         setComposerOpen(false);
         router.push(`/live/${payload.session.id}`);
@@ -3787,6 +4012,8 @@ export default function Home() {
         clearStoryMusicTrack();
         setCoAuthorHandle("");
         setComposerInterests([]);
+        setComposerImmersiveVideo(false);
+        setComposerHotspots([]);
         setComposerOpen(false);
         await loadData(feedView);
         return;
@@ -3810,6 +4037,11 @@ export default function Home() {
           )).map((uploaded) => ({
             url: uploaded.mediaUrl,
             type: uploaded.mediaType,
+            immersive: composerImmersiveVideo && uploaded.mediaType === "video",
+            hotspots:
+              composerImmersiveVideo && uploaded.mediaType === "video" && preparedHotspots.length > 0
+                ? preparedHotspots
+                : undefined,
           }))
           : undefined;
       await req<{ post: Post }>("/api/posts", {
@@ -3831,12 +4063,14 @@ export default function Home() {
 
       setComposerCaption("");
       setComposerMode("post");
-      setComposerFiles([]);
-      setComposerVisibleAt("");
-      setCoAuthorHandle("");
-      setComposerInterests([]);
-      setLiveTitle("");
-      setComposerOpen(false);
+        setComposerFiles([]);
+        setComposerVisibleAt("");
+        setCoAuthorHandle("");
+        setComposerInterests([]);
+        setComposerImmersiveVideo(false);
+        setComposerHotspots([]);
+        setLiveTitle("");
+        setComposerOpen(false);
       await loadData(feedView);
       if (scheduledReleaseAt != null) {
         setPublishNotice(
@@ -3907,6 +4141,8 @@ export default function Home() {
     setComposerOpen(false);
     setComposerMode("post");
     setComposerFiles([]);
+    setComposerImmersiveVideo(false);
+    setComposerHotspots([]);
     setComposerVisibleAt("");
     setCoAuthorHandle("");
     setLiveTitle("");
@@ -3922,6 +4158,8 @@ export default function Home() {
   const handleComposerModeChange = (mode: ComposerMode) => {
     setComposerMode(mode);
     setComposerFiles([]);
+    setComposerImmersiveVideo(false);
+    setComposerHotspots([]);
 
     if (mode === "story") {
       setComposerVisibleAt("");
@@ -4100,6 +4338,8 @@ export default function Home() {
             coAuthorHandle={coAuthorHandle}
             composerVisibleAt={composerVisibleAt}
             composerInterests={composerInterests}
+            composerImmersiveVideo={composerImmersiveVideo}
+            composerHotspots={composerHotspots}
             interestOptions={INTEREST_OPTIONS}
             composerFilesCount={composerFiles.length}
             composerCaptionRef={composerCaptionRef}
@@ -4130,9 +4370,19 @@ export default function Home() {
                   : [...current, interestId],
               )
             }
+            onComposerImmersiveVideoChange={(next) => {
+              setComposerImmersiveVideo(next);
+              if (!next) {
+                setComposerHotspots([]);
+              }
+            }}
+            onAddComposerHotspot={addComposerHotspot}
+            onUpdateComposerHotspot={updateComposerHotspot}
+            onRemoveComposerHotspot={removeComposerHotspot}
             onStoryKindChange={(kind) => {
               setStoryKind(kind);
               setComposerFiles([]);
+              setComposerImmersiveVideo(false);
             }}
             onComposerFilesSelected={addComposerFiles}
             onStoryPollQuestionChange={setStoryPollQuestion}
@@ -4577,7 +4827,7 @@ export default function Home() {
                   <p className="text-xs text-slate-500">@{user.handle}</p>
                 </div>
               </div>
-              {["Home", "Reels", "Messages", "Explore"].map((item) => (
+              {["Home", "Reels", "Messages", "Explore", "Random"].map((item) => (
                 item === "Home" ? (
                   <button
                     key={item}
@@ -4620,6 +4870,16 @@ export default function Home() {
                     onClick={() => router.push("/explore")}
                     className="nav-item mb-2 w-full text-left text-sm"
                     aria-label="Open explore page"
+                  >
+                    {item}
+                  </button>
+                ) : item === "Random" ? (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => router.push("/random")}
+                    className="nav-item mb-2 w-full text-left text-sm"
+                    aria-label="Open random chat page"
                   >
                     {item}
                   </button>
@@ -4952,6 +5212,28 @@ export default function Home() {
             <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
           </svg>
         </button>
+
+        <button
+          type="button"
+          onClick={() => router.push("/random")}
+          className="bottom-nav-item"
+          aria-label="Random chat"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="9" cy="9" r="3" />
+            <circle cx="17" cy="15" r="3" />
+            <path d="M11.5 11.5 14.5 12.5" />
+            <path d="M6.5 16.5 14 9.5" />
+          </svg>
+        </button>
       </nav>
 
       <ChatPanel
@@ -5036,6 +5318,14 @@ export default function Home() {
               }
             : undefined
         }
+        onDeleteRecording={(messageId) => {
+          void deleteRecordingMessage(messageId);
+        }}
+        deletingRecordingId={deletingRecordingId}
+        onDeleteAllRecordings={() => {
+          void deleteAllRecordingsInThread();
+        }}
+        deletingAllRecordings={bulkDeletingRecordings}
         onSubmit={send}
         formatChatTime={formatChatTime}
         formatVoiceDuration={formatVoiceDuration}

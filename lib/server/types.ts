@@ -10,11 +10,22 @@ export type CreatorReportRange = "7d" | "30d" | "90d";
 export type CallMode = "voice" | "video";
 export type CallStatus = "ringing" | "connecting" | "active" | "declined" | "ended" | "missed";
 export type CallSignalType = "offer" | "answer" | "ice";
+export type RandomChatStatus = "connecting" | "active" | "ended";
+export type RandomChatEndReason = "skip" | "left" | "report" | "timeout";
+export type ImmersiveHotspot = {
+  id: string;
+  title: string;
+  detail?: string;
+  yaw: number;
+  pitch: number;
+};
 export type MediaItem = {
   url: string;
   type: "image" | "video";
+  immersive?: boolean;
+  hotspots?: ImmersiveHotspot[];
 };
-export type ChatAttachmentType = "image" | "audio";
+export type ChatAttachmentType = "image" | "audio" | "video";
 export type ChatAttachment = {
   url: string;
   type: ChatAttachmentType;
@@ -69,6 +80,7 @@ export type PostRecord = {
   media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
+  immersiveVideo?: boolean;
   likedBy: string[];
   savedBy: string[];
   commentCount: number;
@@ -188,6 +200,58 @@ export type CallSessionRecord = {
   endedById?: string;
 };
 
+export type RandomChatQueueRecord = {
+  id: string;
+  userId: string;
+  country?: string;
+  preferredCountry?: string;
+  preferredInterests: InterestKey[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RandomChatParticipantRecord = {
+  userId: string;
+  country?: string;
+  interests?: InterestKey[];
+  joinedAt?: string;
+  audioEnabled: boolean;
+  videoEnabled: boolean;
+};
+
+export type RandomChatSignalRecord = {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  type: CallSignalType;
+  payload?: unknown;
+  createdAt: string;
+};
+
+export type RandomChatSessionRecord = {
+  id: string;
+  initiatorId: string;
+  participantIds: string[];
+  participants: RandomChatParticipantRecord[];
+  signals: RandomChatSignalRecord[];
+  status: RandomChatStatus;
+  createdAt: string;
+  matchedAt: string;
+  updatedAt: string;
+  endedAt?: string;
+  endedById?: string;
+  endedReason?: RandomChatEndReason;
+};
+
+export type RandomChatReportRecord = {
+  id: string;
+  sessionId: string;
+  reporterId: string;
+  reportedUserId: string;
+  reason?: string;
+  createdAt: string;
+};
+
 export type CommentRecord = {
   id: string;
   postId: string;
@@ -266,6 +330,9 @@ export type MotionDb = {
   conversations: ConversationRecord[];
   messages: MessageRecord[];
   callSessions: CallSessionRecord[];
+  randomChatQueue: RandomChatQueueRecord[];
+  randomChatSessions: RandomChatSessionRecord[];
+  randomChatReports: RandomChatReportRecord[];
   follows: FollowRecord[];
   notifications: NotificationRecord[];
   profileViews: ProfileViewRecord[];
@@ -308,6 +375,7 @@ export type PostDto = {
   media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: "image" | "video";
+  immersiveVideo?: boolean;
   deletedAt?: string;
   archivedAt?: string;
 };
@@ -391,6 +459,8 @@ export type ConversationDto = {
   lastMessage: string;
   typing: boolean;
   missedCallCount: number;
+  hasRecordingHistory: boolean;
+  recordingCount: number;
   hasVoiceCallHistory: boolean;
   hasVideoCallHistory: boolean;
   hasIncomingCallHistory: boolean;
@@ -444,6 +514,52 @@ export type CallSessionDto = {
   };
   participants: CallParticipantDto[];
   signals: CallSignalDto[];
+};
+
+export type RandomChatQueueDto = {
+  id: string;
+  country?: string;
+  preferredCountry?: string;
+  preferredInterests: InterestKey[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RandomChatParticipantDto = {
+  userId: string;
+  name: string;
+  avatarGradient: string;
+  avatarUrl?: string;
+  country?: string;
+  interests: InterestKey[];
+  sharedInterests: InterestKey[];
+  audioEnabled: boolean;
+  videoEnabled: boolean;
+  joined: boolean;
+};
+
+export type RandomChatSignalDto = {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  type: CallSignalType;
+  payload?: unknown;
+  createdAt: string;
+};
+
+export type RandomChatSessionDto = {
+  id: string;
+  currentUserId: string;
+  status: RandomChatStatus;
+  createdAt: string;
+  matchedAt: string;
+  updatedAt: string;
+  endedAt?: string;
+  endedReason?: RandomChatEndReason;
+  isInitiator: boolean;
+  otherUser: RandomChatParticipantDto;
+  participants: RandomChatParticipantDto[];
+  signals: RandomChatSignalDto[];
 };
 
 export type CommentDto = {

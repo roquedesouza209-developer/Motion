@@ -14,6 +14,14 @@ type InterestOption = {
   label: string;
 };
 
+type ComposerHotspot = {
+  id: string;
+  title: string;
+  detail: string;
+  yaw: number;
+  pitch: number;
+};
+
 type CreateContentModalProps = {
   open: boolean;
   publishing: boolean;
@@ -23,6 +31,8 @@ type CreateContentModalProps = {
   coAuthorHandle: string;
   composerVisibleAt: string;
   composerInterests: InterestKey[];
+  composerImmersiveVideo: boolean;
+  composerHotspots: ComposerHotspot[];
   interestOptions: readonly InterestOption[];
   composerFilesCount: number;
   composerCaptionRef: RefObject<HTMLTextAreaElement | null>;
@@ -47,6 +57,13 @@ type CreateContentModalProps = {
   onCoAuthorHandleChange: (value: string) => void;
   onVisibleAtChange: (value: string) => void;
   onToggleInterest: (interestId: InterestKey) => void;
+  onComposerImmersiveVideoChange: (next: boolean) => void;
+  onAddComposerHotspot: () => void;
+  onUpdateComposerHotspot: (
+    hotspotId: string,
+    patch: Partial<ComposerHotspot>,
+  ) => void;
+  onRemoveComposerHotspot: (hotspotId: string) => void;
   onStoryKindChange: (kind: MoveKind) => void;
   onComposerFilesSelected: (files: FileList | null) => void;
   onStoryPollQuestionChange: (value: string) => void;
@@ -65,6 +82,8 @@ export default function CreateContentModal({
   coAuthorHandle,
   composerVisibleAt,
   composerInterests,
+  composerImmersiveVideo,
+  composerHotspots,
   interestOptions,
   composerFilesCount,
   composerCaptionRef,
@@ -89,6 +108,10 @@ export default function CreateContentModal({
   onCoAuthorHandleChange,
   onVisibleAtChange,
   onToggleInterest,
+  onComposerImmersiveVideoChange,
+  onAddComposerHotspot,
+  onUpdateComposerHotspot,
+  onRemoveComposerHotspot,
   onStoryKindChange,
   onComposerFilesSelected,
   onStoryPollQuestionChange,
@@ -375,6 +398,145 @@ export default function CreateContentModal({
                   </button>
                 </div>
               </div>
+
+              <div className="rounded-2xl border border-[var(--line)] bg-white p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">360 immersive video</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Turn uploaded videos into a spatial viewer so people can drag to look around.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onComposerImmersiveVideoChange(!composerImmersiveVideo)}
+                    className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition ${
+                      composerImmersiveVideo ? "bg-[var(--brand)]" : "bg-slate-200"
+                    }`}
+                    aria-pressed={composerImmersiveVideo}
+                    aria-label="Toggle immersive 360 video"
+                    title="Toggle immersive 360 video"
+                  >
+                    <span
+                      className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${
+                        composerImmersiveVideo ? "left-6" : "left-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {composerImmersiveVideo ? (
+                <div className="rounded-2xl border border-[var(--line)] bg-white p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Story hotspots</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Add tappable points so viewers can explore key moments inside the 360 scene.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onAddComposerHotspot}
+                      className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700"
+                      disabled={composerHotspots.length >= 4}
+                    >
+                      Add hotspot
+                    </button>
+                  </div>
+
+                  {composerHotspots.length > 0 ? (
+                    <div className="mt-3 space-y-3">
+                      {composerHotspots.map((hotspot, index) => (
+                        <div
+                          key={hotspot.id}
+                          className="rounded-2xl border border-[var(--line)] bg-[var(--brand-soft)] p-3"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                              Hotspot {index + 1}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => onRemoveComposerHotspot(hotspot.id)}
+                              className="text-[11px] font-semibold text-slate-500 hover:text-rose-600"
+                            >
+                              Remove
+                            </button>
+                          </div>
+
+                          <div className="mt-3 grid gap-3">
+                            <input
+                              value={hotspot.title}
+                              onChange={(event) =>
+                                onUpdateComposerHotspot(hotspot.id, {
+                                  title: event.target.value,
+                                })
+                              }
+                              placeholder="Hotspot title"
+                              className="h-10 rounded-xl border border-[var(--line)] bg-white px-3 text-sm text-slate-700"
+                            />
+                            <textarea
+                              value={hotspot.detail}
+                              onChange={(event) =>
+                                onUpdateComposerHotspot(hotspot.id, {
+                                  detail: event.target.value,
+                                })
+                              }
+                              placeholder="Short story note or detail"
+                              className="min-h-20 rounded-2xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-slate-700"
+                            />
+
+                            <label className="block">
+                              <div className="mb-1 flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                <span>Heading</span>
+                                <span>{hotspot.yaw}°</span>
+                              </div>
+                              <input
+                                type="range"
+                                min={-180}
+                                max={180}
+                                step={5}
+                                value={hotspot.yaw}
+                                onChange={(event) =>
+                                  onUpdateComposerHotspot(hotspot.id, {
+                                    yaw: Number(event.target.value),
+                                  })
+                                }
+                                className="w-full accent-[var(--brand)]"
+                              />
+                            </label>
+
+                            <label className="block">
+                              <div className="mb-1 flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                <span>Elevation</span>
+                                <span>{hotspot.pitch}°</span>
+                              </div>
+                              <input
+                                type="range"
+                                min={-45}
+                                max={45}
+                                step={5}
+                                value={hotspot.pitch}
+                                onChange={(event) =>
+                                  onUpdateComposerHotspot(hotspot.id, {
+                                    pitch: Number(event.target.value),
+                                  })
+                                }
+                                className="w-full accent-[var(--brand)]"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 rounded-xl border border-dashed border-[var(--line)] px-3 py-3 text-xs text-slate-500">
+                      No hotspots yet. Add one to mark a person, place, or moment in the scene.
+                    </p>
+                  )}
+                </div>
+              ) : null}
             </div>
           )}
 

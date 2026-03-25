@@ -22,6 +22,11 @@ import type {
   NotificationRecord,
   PostRecord,
   ProfileViewRecord,
+  RandomChatParticipantRecord,
+  RandomChatQueueRecord,
+  RandomChatReportRecord,
+  RandomChatSessionRecord,
+  RandomChatSignalRecord,
   SessionRecord,
   StoryRecord,
   UserRecord,
@@ -31,6 +36,9 @@ const DATA_DIRECTORY = path.join(process.cwd(), "data");
 const DATABASE_PATH = path.join(DATA_DIRECTORY, "motion-db.json");
 const DEMO_PASSWORD = "demo12345";
 const BIN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const RANDOM_CHAT_QUEUE_TTL_MS = 5 * 60 * 1000;
+const RANDOM_CHAT_ACTIVE_TTL_MS = 30 * 60 * 1000;
+const RANDOM_CHAT_ENDED_TTL_MS = 60 * 60 * 1000;
 
 const USER_IDS = {
   demo: "usr_demo",
@@ -175,7 +183,11 @@ function normalizeChatAttachment(input: unknown): ChatAttachment | undefined {
     return undefined;
   }
 
-  if (candidate.type !== "image" && candidate.type !== "audio") {
+  if (
+    candidate.type !== "image" &&
+    candidate.type !== "audio" &&
+    candidate.type !== "video"
+  ) {
     return undefined;
   }
 
@@ -535,6 +547,9 @@ function createSeedDatabase(): MotionDb {
   const liveSessions: LiveSessionRecord[] = [];
   const liveComments: LiveCommentRecord[] = [];
   const callSessions: CallSessionRecord[] = [];
+  const randomChatQueue: RandomChatQueueRecord[] = [];
+  const randomChatSessions: RandomChatSessionRecord[] = [];
+  const randomChatReports: RandomChatReportRecord[] = [];
 
   return {
     users,
@@ -545,6 +560,9 @@ function createSeedDatabase(): MotionDb {
     liveSessions,
     liveComments,
     callSessions,
+    randomChatQueue,
+    randomChatSessions,
+    randomChatReports,
     conversations,
     messages,
     follows,
@@ -565,8 +583,95 @@ function normalizeDatabase(raw: unknown): MotionDb {
     media: unknown,
     mediaUrl: unknown,
     mediaType: unknown,
-  ): { media?: { url: string; type: "image" | "video" }[]; mediaUrl?: string; mediaType?: "image" | "video" } => {
-    const items: { url: string; type: "image" | "video" }[] = [];
+    immersiveVideo?: unknown,
+  ): {
+    media?: {
+      url: string;
+      type: "image" | "video";
+      immersive?: boolean;
+      hotspots?: {
+        id: string;
+        title: string;
+        detail?: string;
+        yaw: number;
+        pitch: number;
+      }[];
+    }[];
+    mediaUrl?: string;
+    mediaType?: "image" | "video";
+    immersiveVideo?: boolean;
+  } => {
+    const items: {
+      url: string;
+      type: "image" | "video";
+      immersive?: boolean;
+      hotspots?: {
+        id: string;
+        title: string;
+        detail?: string;
+        yaw: number;
+        pitch: number;
+      }[];
+    }[] = [];
+
+    const normalizeHotspots = (value: unknown) =>
+      Array.isArray(value)
+        ? (() => {
+            type NormalizedHotspot = {
+              id: string;
+              title: string;
+              detail?: string;
+              yaw: number;
+              pitch: number;
+            };
+
+            return value
+            .map((entry): NormalizedHotspot | null => {
+              if (!entry || typeof entry !== "object") {
+                return null;
+              }
+
+              const candidate = entry as {
+                id?: unknown;
+                title?: unknown;
+                detail?: unknown;
+                yaw?: unknown;
+                pitch?: unknown;
+              };
+
+              if (typeof candidate.title !== "string" || !candidate.title.trim()) {
+                return null;
+              }
+
+              const yaw =
+                typeof candidate.yaw === "number" && Number.isFinite(candidate.yaw)
+                  ? Math.max(-180, Math.min(180, candidate.yaw))
+                  : 0;
+              const pitch =
+                typeof candidate.pitch === "number" && Number.isFinite(candidate.pitch)
+                  ? Math.max(-45, Math.min(45, candidate.pitch))
+                  : 0;
+
+              return {
+                id:
+                  typeof candidate.id === "string" && candidate.id.trim()
+                    ? candidate.id.trim()
+                    : `hst-${Math.random().toString(36).slice(2, 10)}`,
+                title: candidate.title.trim(),
+                detail:
+                  typeof candidate.detail === "string" && candidate.detail.trim()
+                    ? candidate.detail.trim()
+                    : undefined,
+                yaw,
+                pitch,
+              };
+            })
+            .filter(
+              (entry): entry is NormalizedHotspot => entry !== null,
+            )
+            .slice(0, 6);
+          })()
+        : undefined;
 
     if (Array.isArray(media)) {
       for (const entry of media) {
@@ -575,11 +680,18 @@ function normalizeDatabase(raw: unknown): MotionDb {
         }
         const url = (entry as { url?: unknown }).url;
         const type = (entry as { type?: unknown }).type;
+        const immersive = (entry as { immersive?: unknown }).immersive;
+        const hotspots = normalizeHotspots((entry as { hotspots?: unknown }).hotspots);
         if (
           typeof url === "string" &&
           (type === "image" || type === "video")
         ) {
-          items.push({ url, type });
+          items.push({
+            url,
+            type,
+            immersive: type === "video" && typeof immersive === "boolean" ? immersive : undefined,
+            hotspots: type === "video" ? hotspots : undefined,
+          });
         }
       }
     }
@@ -589,13 +701,27 @@ function normalizeDatabase(raw: unknown): MotionDb {
       typeof mediaUrl === "string" &&
       (mediaType === "image" || mediaType === "video")
     ) {
-      items.push({ url: mediaUrl, type: mediaType });
+      items.push({
+        url: mediaUrl,
+        type: mediaType,
+        immersive:
+          mediaType === "video" && typeof immersiveVideo === "boolean"
+            ? immersiveVideo
+            : undefined,
+        hotspots: undefined,
+      });
     }
 
     return {
       media: items.length > 0 ? items : undefined,
       mediaUrl: items[0]?.url ?? (typeof mediaUrl === "string" ? mediaUrl : undefined),
       mediaType: items[0]?.type ?? (mediaType === "image" || mediaType === "video" ? mediaType : undefined),
+      immersiveVideo:
+        items[0]?.type === "video"
+          ? Boolean(items[0]?.immersive)
+          : typeof immersiveVideo === "boolean"
+            ? immersiveVideo
+            : undefined,
     };
   };
   const normalizeStoryPoll = (value: unknown) => {
@@ -803,6 +929,71 @@ function normalizeDatabase(raw: unknown): MotionDb {
                 : new Date().toISOString(),
           }))
       : [];
+  const normalizeRandomChatStatus = (value: unknown) =>
+    value === "connecting" || value === "active" || value === "ended"
+      ? value
+      : "ended";
+  const normalizeRandomChatEndReason = (value: unknown) =>
+    value === "skip" ||
+    value === "left" ||
+    value === "report" ||
+    value === "timeout"
+      ? value
+      : undefined;
+  const normalizeRandomChatParticipant = (
+    value: unknown,
+  ): RandomChatParticipantRecord | null => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
+
+    const participant = value as Partial<RandomChatParticipantRecord>;
+
+    if (typeof participant.userId !== "string") {
+      return null;
+    }
+
+    return {
+      userId: participant.userId,
+      country:
+        typeof participant.country === "string" && participant.country.trim()
+          ? participant.country.trim().toLowerCase()
+          : undefined,
+      interests: normalizeInterests(participant.interests),
+      joinedAt:
+        typeof participant.joinedAt === "string" ? participant.joinedAt : undefined,
+      audioEnabled:
+        typeof participant.audioEnabled === "boolean" ? participant.audioEnabled : true,
+      videoEnabled:
+        typeof participant.videoEnabled === "boolean" ? participant.videoEnabled : true,
+    };
+  };
+  const normalizeRandomChatSignals = (value: unknown): RandomChatSignalRecord[] =>
+    Array.isArray(value)
+      ? value
+          .filter(
+            (entry): entry is Partial<RandomChatSignalRecord> =>
+              Boolean(entry && typeof entry === "object"),
+          )
+          .filter(
+            (entry): entry is Partial<RandomChatSignalRecord> & {
+              fromUserId: string;
+              toUserId: string;
+            } =>
+              typeof entry.fromUserId === "string" && typeof entry.toUserId === "string",
+          )
+          .map((signal) => ({
+            id: typeof signal.id === "string" ? signal.id : createId("rsg"),
+            fromUserId: signal.fromUserId,
+            toUserId: signal.toUserId,
+            type: normalizeCallSignalType(signal.type),
+            payload: signal.payload,
+            createdAt:
+              typeof signal.createdAt === "string"
+                ? signal.createdAt
+                : new Date().toISOString(),
+          }))
+      : [];
 
   const normalizedPosts = Array.isArray(candidate.posts)
     ? (candidate.posts as Partial<PostRecord>[]).map((post) => ({
@@ -811,6 +1002,7 @@ function normalizeDatabase(raw: unknown): MotionDb {
           (post as PostRecord).media,
           post.mediaUrl,
           post.mediaType,
+          post.immersiveVideo,
         ),
         interests: normalizeInterests(post.interests),
         coAuthorIds: normalizeStringArray(post.coAuthorIds),
@@ -1002,6 +1194,116 @@ function normalizeDatabase(raw: unknown): MotionDb {
               typeof session.endedById === "string" ? session.endedById : undefined,
           }))
       : [],
+    randomChatQueue: Array.isArray(
+      (candidate as { randomChatQueue?: unknown }).randomChatQueue,
+    )
+      ? (
+          (candidate as { randomChatQueue: unknown[] }).randomChatQueue as Partial<RandomChatQueueRecord>[]
+        )
+          .filter(
+            (entry): entry is Partial<RandomChatQueueRecord> & { userId: string } =>
+              Boolean(entry && typeof entry.userId === "string"),
+          )
+          .map((entry) => ({
+            id: typeof entry.id === "string" ? entry.id : createId("rqc"),
+            userId: entry.userId,
+            country:
+              typeof entry.country === "string" && entry.country.trim()
+                ? entry.country.trim().toLowerCase()
+                : undefined,
+            preferredCountry:
+              typeof entry.preferredCountry === "string" && entry.preferredCountry.trim()
+                ? entry.preferredCountry.trim().toLowerCase()
+                : undefined,
+            preferredInterests: normalizeInterests(entry.preferredInterests),
+            createdAt:
+              typeof entry.createdAt === "string"
+                ? entry.createdAt
+                : new Date().toISOString(),
+            updatedAt:
+              typeof entry.updatedAt === "string"
+                ? entry.updatedAt
+                : typeof entry.createdAt === "string"
+                  ? entry.createdAt
+                  : new Date().toISOString(),
+          }))
+      : [],
+    randomChatSessions: Array.isArray(
+      (candidate as { randomChatSessions?: unknown }).randomChatSessions,
+    )
+      ? (
+          (candidate as { randomChatSessions: unknown[] })
+            .randomChatSessions as Partial<RandomChatSessionRecord>[]
+        )
+          .filter(
+            (session): session is Partial<RandomChatSessionRecord> & {
+              initiatorId: string;
+            } =>
+              Boolean(session && typeof session.initiatorId === "string"),
+          )
+          .map((session) => ({
+            id: typeof session.id === "string" ? session.id : createId("rnd"),
+            initiatorId: session.initiatorId,
+            participantIds: normalizeStringArray(session.participantIds),
+            participants: Array.isArray(session.participants)
+              ? session.participants
+                  .map((participant) => normalizeRandomChatParticipant(participant))
+                  .filter(
+                    (participant): participant is RandomChatParticipantRecord =>
+                      Boolean(participant),
+                  )
+              : [],
+            signals: normalizeRandomChatSignals(session.signals),
+            status: normalizeRandomChatStatus(session.status),
+            createdAt:
+              typeof session.createdAt === "string"
+                ? session.createdAt
+                : new Date().toISOString(),
+            matchedAt:
+              typeof session.matchedAt === "string"
+                ? session.matchedAt
+                : typeof session.createdAt === "string"
+                  ? session.createdAt
+                  : new Date().toISOString(),
+            updatedAt:
+              typeof session.updatedAt === "string"
+                ? session.updatedAt
+                : new Date().toISOString(),
+            endedAt: typeof session.endedAt === "string" ? session.endedAt : undefined,
+            endedById:
+              typeof session.endedById === "string" ? session.endedById : undefined,
+            endedReason: normalizeRandomChatEndReason(session.endedReason),
+          }))
+      : [],
+    randomChatReports: Array.isArray(
+      (candidate as { randomChatReports?: unknown }).randomChatReports,
+    )
+      ? (
+          (candidate as { randomChatReports: unknown[] })
+            .randomChatReports as Partial<RandomChatReportRecord>[]
+        )
+          .filter(
+            (report): report is Partial<RandomChatReportRecord> & {
+              sessionId: string;
+              reporterId: string;
+              reportedUserId: string;
+            } =>
+              Boolean(report && typeof report.sessionId === "string") &&
+              typeof report.reporterId === "string" &&
+              typeof report.reportedUserId === "string",
+          )
+          .map((report) => ({
+            id: typeof report.id === "string" ? report.id : createId("rrp"),
+            sessionId: report.sessionId,
+            reporterId: report.reporterId,
+            reportedUserId: report.reportedUserId,
+            reason: typeof report.reason === "string" ? report.reason : undefined,
+            createdAt:
+              typeof report.createdAt === "string"
+                ? report.createdAt
+                : new Date().toISOString(),
+          }))
+      : [],
     follows: Array.isArray(candidate.follows)
       ? (candidate.follows as FollowRecord[]).map((follow, index) => ({
           ...follow,
@@ -1122,6 +1424,35 @@ function pruneExpiredRecords(db: MotionDb): void {
     db.liveSessions = db.liveSessions.filter((session) => !staleLiveIds.has(session.id));
     db.liveComments = db.liveComments.filter((comment) => !staleLiveIds.has(comment.liveId));
   }
+
+  db.randomChatQueue = db.randomChatQueue.filter(
+    (entry) => now - new Date(entry.updatedAt).getTime() <= RANDOM_CHAT_QUEUE_TTL_MS,
+  );
+
+  db.randomChatSessions = db.randomChatSessions.map((session) => {
+    if (
+      !session.endedAt &&
+      now - new Date(session.updatedAt).getTime() > RANDOM_CHAT_ACTIVE_TTL_MS
+    ) {
+      return {
+        ...session,
+        status: "ended",
+        endedAt: new Date().toISOString(),
+        endedReason: session.endedReason ?? "timeout",
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    return session;
+  });
+
+  db.randomChatSessions = db.randomChatSessions.filter((session) => {
+    if (!session.endedAt) {
+      return true;
+    }
+
+    return now - new Date(session.endedAt).getTime() <= RANDOM_CHAT_ENDED_TTL_MS;
+  });
 
   db.callSessions = db.callSessions.map((session) => {
     if (

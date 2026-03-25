@@ -46,6 +46,9 @@ export async function GET(request: Request) {
         const history = (messagesByConversation.get(conversation.id) ?? [])
           .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         const callHistory = history.filter((message) => message.systemType === "call");
+        const recordingHistory = history.filter((message) =>
+          message.attachment?.name?.startsWith("motion-call-recording-"),
+        );
         const lastCall = callHistory.at(-1);
         const directionalCalls = callHistory.filter(
           (message) =>
@@ -87,6 +90,8 @@ export async function GET(request: Request) {
           }),
           typing,
           missedCallCount,
+          hasRecordingHistory: recordingHistory.length > 0,
+          recordingCount: recordingHistory.length,
           hasVoiceCallHistory: callHistory.some((message) => message.callMode === "voice"),
           hasVideoCallHistory: callHistory.some((message) => message.callMode === "video"),
           hasIncomingCallHistory: directionalCalls.some(

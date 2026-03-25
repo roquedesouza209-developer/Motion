@@ -40,6 +40,7 @@ export type ProfileGridPost = {
   timeAgo: string;
   mediaUrl?: string;
   mediaType?: MediaType;
+  immersiveVideo?: boolean;
   visibleAt?: string;
   deletedAt?: string;
   archivedAt?: string;
@@ -276,6 +277,11 @@ function MediaTile({
         {capsuleCountdown ? (
           <span className="rounded-full bg-black/35 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
             Time Capsule
+          </span>
+        ) : null}
+        {post.immersiveVideo ? (
+          <span className="rounded-full bg-cyan-400/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100 backdrop-blur-sm">
+            360
           </span>
         ) : null}
         {hasInvitePending ? (

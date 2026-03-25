@@ -125,7 +125,9 @@ export async function POST(request: Request, context: RouteContext) {
   const hasAttachment =
     attachment &&
     typeof attachment.url === "string" &&
-    (attachment.type === "image" || attachment.type === "audio");
+    (attachment.type === "image" ||
+      attachment.type === "audio" ||
+      attachment.type === "video");
 
   if (!hasAttachment && (text.length < 1 || text.length > 500)) {
     return NextResponse.json(

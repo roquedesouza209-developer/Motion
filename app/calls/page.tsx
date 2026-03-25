@@ -142,6 +142,8 @@ export default function CallsPage() {
   const [callBusy, setCallBusy] = useState(false);
   const [currentCallStatusLabel, setCurrentCallStatusLabel] = useState("");
   const [markingMissedCallsSeen, setMarkingMissedCallsSeen] = useState(false);
+  const [deletingRecordingId, setDeletingRecordingId] = useState<string | null>(null);
+  const [bulkDeletingRecordings, setBulkDeletingRecordings] = useState(false);
   const chatThreadRef = useRef<HTMLDivElement | null>(null);
   const chatPhotoInputRef = useRef<HTMLInputElement | null>(null);
   const activeIdRef = useRef<string | null>(null);
@@ -190,6 +192,92 @@ export default function CallsPage() {
     }
     return payload.messages;
   }, []);
+
+  const deleteRecordingMessage = useCallback(
+    async (messageId: string) => {
+      if (!activeId || deletingRecordingId) {
+        return;
+      }
+
+      const confirmed =
+        typeof window === "undefined"
+          ? true
+          : window.confirm("Delete this saved call recording from the thread?");
+
+      if (!confirmed) {
+        return;
+      }
+
+      setDeletingRecordingId(messageId);
+      setError(null);
+
+      try {
+        await req<{ ok: boolean }>(`/api/messages/${activeId}/recordings/${messageId}`, {
+          method: "DELETE",
+        });
+        setMessages((current) => current.filter((message) => message.id !== messageId));
+        await loadConversations();
+      } catch (deleteError) {
+        setError(
+          deleteError instanceof Error
+            ? deleteError.message
+            : "Could not delete the recording.",
+        );
+      } finally {
+        setDeletingRecordingId(null);
+      }
+    },
+    [activeId, deletingRecordingId, loadConversations],
+  );
+
+  const deleteAllRecordingsInThread = useCallback(async () => {
+    if (!activeId || bulkDeletingRecordings) {
+      return;
+    }
+
+    const recordingTotal =
+      conversations.find((conversation) => conversation.id === activeId)?.recordingCount ?? 0;
+    if (recordingTotal <= 0) {
+      return;
+    }
+
+    const confirmed =
+      typeof window === "undefined"
+        ? true
+        : window.confirm(
+            `Delete all ${recordingTotal} saved recording${
+              recordingTotal === 1 ? "" : "s"
+            } from this thread?`,
+          );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setBulkDeletingRecordings(true);
+    setError(null);
+
+    try {
+      await req<{ ok: boolean; deletedCount: number }>(`/api/messages/${activeId}/recordings`, {
+        method: "DELETE",
+      });
+      setMessages((current) =>
+        current.filter(
+          (message) =>
+            !message.attachment?.name?.startsWith("motion-call-recording-"),
+        ),
+      );
+      await loadConversations();
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Could not delete the recordings.",
+      );
+    } finally {
+      setBulkDeletingRecordings(false);
+    }
+  }, [activeId, bulkDeletingRecordings, conversations, loadConversations]);
 
   useEffect(() => {
     const storedViewport = window.localStorage.getItem("motion-viewport");
@@ -470,6 +558,18 @@ export default function CallsPage() {
     });
   }, [callDirectionFilter, callTypeFilter, chatSearch, conversations]);
 
+  useEffect(() => {
+    if (filteredConversations.length === 0) {
+      return;
+    }
+
+    if (activeId && filteredConversations.some((conversation) => conversation.id === activeId)) {
+      return;
+    }
+
+    setActiveId(filteredConversations[0]?.id ?? null);
+  }, [activeId, filteredConversations]);
+
   const missedCallsTotal = useMemo(
     () =>
       conversations.reduce(
@@ -661,6 +761,14 @@ export default function CallsPage() {
             onToggleRecording={() => undefined}
             onStartVoiceCall={() => startGlobalCall("voice")}
             onStartVideoCall={() => startGlobalCall("video")}
+            onDeleteRecording={(messageId) => {
+              void deleteRecordingMessage(messageId);
+            }}
+            deletingRecordingId={deletingRecordingId}
+            onDeleteAllRecordings={() => {
+              void deleteAllRecordingsInThread();
+            }}
+            deletingAllRecordings={bulkDeletingRecordings}
             onSubmit={(event) => event.preventDefault()}
             formatChatTime={formatChatTime}
             formatVoiceDuration={formatVoiceDuration}

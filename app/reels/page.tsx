@@ -1,11 +1,24 @@
 "use client";
 
 import CaptionWithHashtags from "@/components/caption-with-hashtags";
+import ImmersiveVideoViewer from "@/components/media/immersive-video-viewer";
 import LivePostAge from "@/components/live-post-age";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type MediaType = "image" | "video";
+type MediaItem = {
+  url: string;
+  type: MediaType;
+  immersive?: boolean;
+  hotspots?: {
+    id: string;
+    title: string;
+    detail?: string;
+    yaw: number;
+    pitch: number;
+  }[];
+};
 type ViewportMode = "desktop" | "tablet" | "mobile";
 
 type ReelPost = {
@@ -23,8 +36,10 @@ type ReelPost = {
   gradient: string;
   createdAt: string;
   timeAgo: string;
+  media?: MediaItem[];
   mediaUrl?: string;
   mediaType?: MediaType;
+  immersiveVideo?: boolean;
 };
 
 type ReelResponse = {
@@ -294,16 +309,31 @@ function ReelCard({
         aria-label={paused ? "Play reel" : "Pause reel"}
       >
         {reel.mediaUrl && reel.mediaType === "video" ? (
-          <video
-            ref={videoRef}
-            src={reel.mediaUrl}
-            className="h-full w-full object-cover"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-          />
+          reel.immersiveVideo ? (
+            <ImmersiveVideoViewer
+              src={reel.mediaUrl}
+              hotspots={reel.media?.[0]?.hotspots}
+              videoRef={videoRef}
+              className="h-full w-full"
+              videoClassName="h-full w-full"
+              autoPlay
+              muted
+              loop
+              controls={false}
+              preload="metadata"
+            />
+          ) : (
+            <video
+              ref={videoRef}
+              src={reel.mediaUrl}
+              className="h-full w-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+            />
+          )
         ) : (
           <div
             className="flex h-full w-full items-end justify-start bg-cover bg-center"
@@ -323,6 +353,12 @@ function ReelCard({
           <span className="h-2 w-2 rounded-full bg-emerald-400" />
           Reels
         </div>
+
+        {reel.immersiveVideo ? (
+          <div className="pointer-events-none absolute left-5 top-16 rounded-full bg-cyan-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100 backdrop-blur-md">
+            Spatial viewer
+          </div>
+        ) : null}
 
         <div className="pointer-events-none absolute right-5 top-5 rounded-full bg-black/35 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-md">
           <LivePostAge createdAt={reel.createdAt} initialLabel={reel.timeAgo} />
