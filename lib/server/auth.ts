@@ -35,6 +35,7 @@ export function toPublicUser(user: UserRecord): PublicUser {
     avatarUrl: user.avatarUrl,
     bio: user.bio,
     interests: user.interests,
+    chatWallpaper: user.chatWallpaper,
     feedVisibility: user.feedVisibility,
     hiddenFromIds: user.hiddenFromIds,
   };

@@ -1,8 +1,13 @@
 "use client";
 
-import type { FormEvent, RefObject } from "react";
+import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 
 import Image from "next/image";
+import {
+  CHAT_WALLPAPER_OPTIONS,
+  DEFAULT_CHAT_WALLPAPER,
+  type ChatWallpaper,
+} from "@/lib/chat-wallpapers";
 
 type Presence = "Online" | "Away";
 type MessagePanelTab = "chats" | "calls" | "recordings";
@@ -84,6 +89,8 @@ type ChatPanelProps = {
   text: string;
   callStatusLabel?: string | null;
   callBusy?: boolean;
+  chatWallpaper?: ChatWallpaper;
+  savingChatWallpaper?: boolean;
   chatThreadRef: RefObject<HTMLDivElement | null>;
   chatPhotoInputRef: RefObject<HTMLInputElement | null>;
   onClose: () => void;
@@ -104,6 +111,7 @@ type ChatPanelProps = {
   onStartVoiceCall: () => void;
   onStartVideoCall: () => void;
   onOpenGroupVideoCall?: () => void;
+  onChatWallpaperChange?: (wallpaper: ChatWallpaper) => void;
   onDeleteRecording?: (messageId: string) => void;
   deletingRecordingId?: string | null;
   onDeleteAllRecordings?: () => void;
@@ -269,6 +277,8 @@ export default function ChatPanel({
   text,
   callStatusLabel,
   callBusy,
+  chatWallpaper = DEFAULT_CHAT_WALLPAPER,
+  savingChatWallpaper = false,
   chatThreadRef,
   chatPhotoInputRef,
   onClose,
@@ -289,6 +299,7 @@ export default function ChatPanel({
   onStartVoiceCall,
   onStartVideoCall,
   onOpenGroupVideoCall,
+  onChatWallpaperChange,
   onDeleteRecording,
   deletingRecordingId = null,
   onDeleteAllRecordings,
@@ -297,6 +308,24 @@ export default function ChatPanel({
   formatChatTime,
   formatVoiceDuration,
 }: ChatPanelProps) {
+  const [wallpaperMenuOpen, setWallpaperMenuOpen] = useState(false);
+  const wallpaperMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!wallpaperMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!wallpaperMenuRef.current?.contains(event.target as Node)) {
+        setWallpaperMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [wallpaperMenuOpen]);
+
   if (!open) {
     return null;
   }
@@ -633,6 +662,62 @@ export default function ChatPanel({
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
+                  <div ref={wallpaperMenuRef} className="chat-wallpaper-controls">
+                    <button
+                      type="button"
+                      onClick={() => setWallpaperMenuOpen((current) => !current)}
+                      className="chat-header-button"
+                      aria-label="Choose chat wallpaper"
+                      aria-expanded={wallpaperMenuOpen}
+                      title="Wallpaper"
+                    >
+                      <svg
+                        viewBox="0 0 20 20"
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3.5 5.3A1.8 1.8 0 0 1 5.3 3.5h9.4a1.8 1.8 0 0 1 1.8 1.8v9.4a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8Z" />
+                        <path d="m5.9 12.8 2.5-2.7 2 1.8 3.7-4 1.9 2.3" />
+                        <circle cx="7.2" cy="7.3" r="1" />
+                      </svg>
+                    </button>
+                    {wallpaperMenuOpen ? (
+                      <div className="chat-wallpaper-menu">
+                        <div className="chat-wallpaper-menu-header">
+                          <span>Wallpaper</span>
+                          <span>{savingChatWallpaper ? "Saving..." : "Choose a look"}</span>
+                        </div>
+                        <div className="chat-wallpaper-grid">
+                          {CHAT_WALLPAPER_OPTIONS.map((option) => (
+                            <button
+                              key={option.id}
+                              type="button"
+                              onClick={() => {
+                                onChatWallpaperChange?.(option.id);
+                                setWallpaperMenuOpen(false);
+                              }}
+                              className={`chat-wallpaper-option ${
+                                chatWallpaper === option.id ? "is-active" : ""
+                              }`}
+                              disabled={savingChatWallpaper}
+                            >
+                              <span
+                                className={`chat-wallpaper-swatch is-${option.id}`}
+                                aria-hidden
+                              />
+                              <span className="chat-wallpaper-option-label">
+                                {option.label}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                   {activeRecordingCount > 0 ? (
                     <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-600">
                       {activeRecordingCount} recording
@@ -659,7 +744,7 @@ export default function ChatPanel({
                   <button
                     type="button"
                     onClick={onStartVoiceCall}
-                    className="grid h-8 w-8 place-items-center rounded-full border border-[var(--line)] bg-white text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50"
+                    className="chat-header-button grid h-8 w-8 place-items-center rounded-full disabled:opacity-50"
                     aria-label="Start voice call"
                     title="Voice call"
                     disabled={!activeId || callBusy}
@@ -679,7 +764,7 @@ export default function ChatPanel({
                   <button
                     type="button"
                     onClick={onStartVideoCall}
-                    className="grid h-8 w-8 place-items-center rounded-full border border-[var(--line)] bg-white text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50"
+                    className="chat-header-button grid h-8 w-8 place-items-center rounded-full disabled:opacity-50"
                     aria-label="Start video call"
                     title="Video call"
                     disabled={!activeId || callBusy}
@@ -701,7 +786,7 @@ export default function ChatPanel({
                     <button
                       type="button"
                       onClick={onOpenGroupVideoCall}
-                      className="grid h-8 w-8 place-items-center rounded-full border border-[var(--line)] bg-white text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50"
+                      className="chat-header-button grid h-8 w-8 place-items-center rounded-full disabled:opacity-50"
                       aria-label="Start group video call"
                       title="Group video call"
                       disabled={!activeId || callBusy}
@@ -733,7 +818,11 @@ export default function ChatPanel({
                   </button>
                 </div>
               </div>
-              <div ref={chatThreadRef} className="chat-thread space-y-2 px-4 py-3">
+              <div
+                ref={chatThreadRef}
+                className="chat-thread space-y-2 px-4 py-3"
+                data-chat-wallpaper={chatWallpaper}
+              >
                 {threadMessages.map((message) => (
                   message.from === "system" ? (
                     <div key={message.id} className="flex justify-center py-1">
@@ -759,106 +848,117 @@ export default function ChatPanel({
                     className={`chat-message ${message.from === "me" ? "is-me" : "is-them"}`}
                   >
                     <div
-                      className={`chat-bubble ${message.from === "me" ? "is-me" : "is-them"}`}
+                      className={`chat-message-shell ${
+                        message.from === "me" ? "is-me" : "is-them"
+                      }`}
                     >
-                      {isCallRecordingAttachment(message.attachment) ? (
-                        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-600">
-                          <span className="h-2 w-2 rounded-full bg-rose-500" />
-                          <span>Call recording</span>
-                        </div>
-                      ) : null}
-                      {message.attachment?.type === "image" ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            window.open(message.attachment?.url, "_blank", "noopener,noreferrer")
-                          }
-                          className="mb-2 block overflow-hidden rounded-2xl"
-                        >
-                          <Image
-                            src={message.attachment.url}
-                            alt="Shared chat photo"
-                            width={220}
-                            height={220}
-                            className="h-auto w-[220px] max-w-full rounded-2xl object-cover"
-                          />
-                        </button>
-                      ) : null}
-                      {message.attachment?.type === "video" ? (
-                        <div className="mb-2 overflow-hidden rounded-2xl bg-slate-950">
-                          <video
-                            controls
-                            preload="metadata"
-                            src={message.attachment.url}
-                            className="h-auto w-[240px] max-w-full rounded-2xl bg-black"
-                          />
-                        </div>
-                      ) : null}
-                      {message.attachment?.type === "audio" ? (
-                        <div className="chat-voice-note">
-                          <div className="chat-voice-pill">
-                            <svg
-                              viewBox="0 0 20 20"
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <rect x="7" y="3" width="6" height="10" rx="3" />
-                              <path d="M4.5 9.5a5.5 5.5 0 0 0 11 0" />
-                              <path d="M10 15v2.5" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <audio
-                              controls
-                              src={message.attachment.url}
-                              className="chat-audio-player"
-                              preload="metadata"
-                            />
-                            <p className="mt-1 text-[10px] opacity-75">
-                              {formatVoiceDuration(message.attachment.durationMs)}{" "}
-                              {isCallRecordingAttachment(message.attachment)
-                                ? "call recording"
-                                : "voice message"}
-                            </p>
-                          </div>
-                        </div>
-                      ) : null}
-                      {message.text ? <p>{message.text}</p> : null}
-                      {isCallRecordingAttachment(message.attachment) ? (
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <a
-                            href={message.attachment?.url}
-                            download={message.attachment?.name ?? `motion-recording-${message.id}.webm`}
-                            className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[10px] font-semibold text-slate-600 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                          >
-                            Download
-                          </a>
-                          {onDeleteRecording ? (
-                            <button
-                              type="button"
-                              onClick={() => onDeleteRecording(message.id)}
-                              disabled={deletingRecordingId === message.id}
-                              className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[10px] font-semibold text-rose-600 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {deletingRecordingId === message.id
-                                ? "Removing..."
-                                : "Delete"}
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      <div
-                        className={`mt-2 flex items-center gap-1.5 text-[10px] ${
-                          message.from === "me" ? "text-white/80" : "text-slate-500"
-                        }`}
-                      >
+                      <div className="chat-message-label">
+                        <span className="chat-message-author">
+                          {message.from === "me"
+                            ? "You"
+                            : activeConversation?.name ?? "Motion"}
+                        </span>
+                        <span aria-hidden>{"//"}</span>
                         <span>{formatChatTime(message.createdAt)}</span>
+                      </div>
+                      <div
+                        className={`chat-bubble ${message.from === "me" ? "is-me" : "is-them"}`}
+                      >
+                        {isCallRecordingAttachment(message.attachment) ? (
+                          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-rose-200/70 bg-rose-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-100">
+                            <span className="h-2 w-2 rounded-full bg-rose-300" />
+                            <span>Call recording</span>
+                          </div>
+                        ) : null}
+                        {message.attachment?.type === "image" ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              window.open(message.attachment?.url, "_blank", "noopener,noreferrer")
+                            }
+                            className="mb-2 block overflow-hidden rounded-[1.1rem]"
+                          >
+                            <Image
+                              src={message.attachment.url}
+                              alt="Shared chat photo"
+                              width={220}
+                              height={220}
+                              className="h-auto w-[220px] max-w-full rounded-[1.1rem] object-cover"
+                            />
+                          </button>
+                        ) : null}
+                        {message.attachment?.type === "video" ? (
+                          <div className="mb-2 overflow-hidden rounded-[1.1rem] bg-slate-950">
+                            <video
+                              controls
+                              preload="metadata"
+                              src={message.attachment.url}
+                              className="h-auto w-[240px] max-w-full rounded-[1.1rem] bg-black"
+                            />
+                          </div>
+                        ) : null}
+                        {message.attachment?.type === "audio" ? (
+                          <div className="chat-voice-note">
+                            <div className="chat-voice-pill">
+                              <svg
+                                viewBox="0 0 20 20"
+                                className="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect x="7" y="3" width="6" height="10" rx="3" />
+                                <path d="M4.5 9.5a5.5 5.5 0 0 0 11 0" />
+                                <path d="M10 15v2.5" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <audio
+                                controls
+                                src={message.attachment.url}
+                                className="chat-audio-player"
+                                preload="metadata"
+                              />
+                              <p className="mt-1 text-[10px] text-white/70">
+                                {formatVoiceDuration(message.attachment.durationMs)}{" "}
+                                {isCallRecordingAttachment(message.attachment)
+                                  ? "call recording"
+                                  : "voice message"}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
+                        {message.text ? <p className="chat-bubble-text">{message.text}</p> : null}
+                        {isCallRecordingAttachment(message.attachment) ? (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <a
+                              href={message.attachment?.url}
+                              download={message.attachment?.name ?? `motion-recording-${message.id}.webm`}
+                              className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[10px] font-semibold text-white transition hover:border-white/50 hover:bg-white/16"
+                            >
+                              Download
+                            </a>
+                            {onDeleteRecording ? (
+                              <button
+                                type="button"
+                                onClick={() => onDeleteRecording(message.id)}
+                                disabled={deletingRecordingId === message.id}
+                                className="rounded-full border border-rose-200/55 bg-rose-500/10 px-3 py-1 text-[10px] font-semibold text-rose-100 transition hover:border-rose-200/75 hover:bg-rose-500/16 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {deletingRecordingId === message.id
+                                  ? "Removing..."
+                                  : "Delete"}
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
                         {message.from === "me" ? (
-                          <MessageTicks state={message.deliveryState} />
+                          <div className="chat-bubble-meta is-me">
+                            <span className="sr-only">{message.deliveryState}</span>
+                            <MessageTicks state={message.deliveryState} />
+                          </div>
                         ) : null}
                       </div>
                     </div>
@@ -944,7 +1044,7 @@ export default function ChatPanel({
                 <button
                   type="button"
                   onClick={() => chatPhotoInputRef.current?.click()}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[var(--line)] bg-white text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-60"
+                  className="chat-composer-button grid h-9 w-9 shrink-0 place-items-center rounded-full disabled:opacity-60"
                   aria-label="Send photo"
                   disabled={!activeId || chatUploading || chatSending || recording}
                 >
@@ -965,11 +1065,9 @@ export default function ChatPanel({
                 <button
                   type="button"
                   onClick={onToggleRecording}
-                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition ${
-                    recording
-                      ? "border-rose-300 bg-rose-500 text-white"
-                      : "border-[var(--line)] bg-white text-slate-500 hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                  } disabled:opacity-60`}
+                  className={`chat-composer-button grid h-9 w-9 shrink-0 place-items-center rounded-full transition disabled:opacity-60 ${
+                    recording ? "is-recording" : ""
+                  }`}
                   aria-label={recording ? "Stop recording" : "Record voice message"}
                   disabled={!activeId || chatUploading || chatSending}
                 >
@@ -996,12 +1094,12 @@ export default function ChatPanel({
                 <input
                   value={text}
                   onChange={(event) => onMessageInputChange(event.target.value)}
-                  className="h-9 flex-1 rounded-full border border-[var(--line)] bg-white px-4 text-xs transition focus:border-[var(--brand)] focus:outline-none"
+                  className="chat-composer-input h-9 flex-1 rounded-full px-4 text-xs transition focus:outline-none"
                   placeholder={recording ? "Recording voice message..." : "Type a message..."}
                   disabled={!activeId || chatUploading}
                 />
                 <button
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-white transition hover:brightness-110 disabled:opacity-60"
+                  className="chat-composer-button is-send grid h-9 w-9 shrink-0 place-items-center rounded-full transition hover:brightness-110 disabled:opacity-60"
                   type="submit"
                   aria-label="Send message"
                   disabled={!activeId || !text.trim() || chatUploading || chatSending}
@@ -1028,7 +1126,7 @@ export default function ChatPanel({
                 </div>
               )}
               {messageTab === "chats" && (recording || chatUploading) ? (
-                <div className="border-t border-[var(--line)] px-4 py-2 text-[11px] font-semibold text-slate-500">
+                <div className="chat-composer-status border-t border-[var(--line)] px-4 py-2 text-[11px] font-semibold text-slate-500">
                   {recording ? "Recording voice message..." : "Sending media..."}
                 </div>
               ) : null}

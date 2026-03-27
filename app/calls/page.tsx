@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import ChatPanel from "@/components/home/chat-panel";
 import UserAvatar from "@/components/user-avatar";
+import type { ChatWallpaper } from "@/lib/chat-wallpapers";
 import {
   MOTION_CALL_STATE_EVENT,
   MOTION_CALL_SYNC_REQUEST_EVENT,
@@ -27,6 +28,7 @@ type User = {
   id: string;
   name: string;
   handle: string;
+  chatWallpaper?: ChatWallpaper;
   avatarGradient: string;
   avatarUrl?: string;
 };
@@ -142,6 +144,7 @@ export default function CallsPage() {
   const [callBusy, setCallBusy] = useState(false);
   const [currentCallStatusLabel, setCurrentCallStatusLabel] = useState("");
   const [markingMissedCallsSeen, setMarkingMissedCallsSeen] = useState(false);
+  const [savingChatWallpaper, setSavingChatWallpaper] = useState(false);
   const [deletingRecordingId, setDeletingRecordingId] = useState<string | null>(null);
   const [bulkDeletingRecordings, setBulkDeletingRecordings] = useState(false);
   const chatThreadRef = useRef<HTMLDivElement | null>(null);
@@ -609,6 +612,50 @@ export default function CallsPage() {
     [activeId, callBusy, currentCall],
   );
 
+  const saveChatWallpaper = useCallback(
+    async (wallpaper: ChatWallpaper) => {
+      if (!user || savingChatWallpaper || user.chatWallpaper === wallpaper) {
+        return;
+      }
+
+      const previousWallpaper = user.chatWallpaper;
+      setSavingChatWallpaper(true);
+      setUser((current) =>
+        current
+          ? {
+              ...current,
+              chatWallpaper: wallpaper,
+            }
+          : current,
+      );
+
+      try {
+        const payload = await req<{ user: User }>("/api/auth/profile", {
+          method: "PATCH",
+          body: JSON.stringify({ chatWallpaper: wallpaper }),
+        });
+        setUser(payload.user);
+      } catch (wallpaperError) {
+        setUser((current) =>
+          current
+            ? {
+                ...current,
+                chatWallpaper: previousWallpaper,
+              }
+            : current,
+        );
+        setError(
+          wallpaperError instanceof Error
+            ? wallpaperError.message
+            : "Could not update chat wallpaper.",
+        );
+      } finally {
+        setSavingChatWallpaper(false);
+      }
+    },
+    [savingChatWallpaper, user],
+  );
+
   const markAllMissedCallsSeen = useCallback(async () => {
     if (markingMissedCallsSeen || missedCallsTotal <= 0) {
       return;
@@ -741,6 +788,8 @@ export default function CallsPage() {
             text=""
             callStatusLabel={callStatusLabel}
             callBusy={callBusy}
+            chatWallpaper={user?.chatWallpaper}
+            savingChatWallpaper={savingChatWallpaper}
             chatThreadRef={chatThreadRef}
             chatPhotoInputRef={chatPhotoInputRef}
             onClose={() => router.push("/")}
@@ -761,6 +810,9 @@ export default function CallsPage() {
             onToggleRecording={() => undefined}
             onStartVoiceCall={() => startGlobalCall("voice")}
             onStartVideoCall={() => startGlobalCall("video")}
+            onChatWallpaperChange={(wallpaper) => {
+              void saveChatWallpaper(wallpaper);
+            }}
             onDeleteRecording={(messageId) => {
               void deleteRecordingMessage(messageId);
             }}

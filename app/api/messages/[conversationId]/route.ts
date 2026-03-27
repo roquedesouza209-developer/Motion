@@ -73,22 +73,24 @@ export async function GET(request: Request, context: RouteContext) {
 
     return {
       type: "ok" as const,
-      conversation: {
-        id: conversation.id,
-        userId: otherUserId,
-        name: isGroup
-          ? `${otherUsers
+        conversation: {
+          id: conversation.id,
+          userId: otherUserId,
+          name: isGroup
+            ? `${otherUsers
               .slice(0, 2)
               .map((candidate) => candidate.name)
               .join(", ")}${otherUsers.length > 2 ? ` +${otherUsers.length - 2}` : ""}`
           : otherUser?.name ?? "Conversation",
-        isGroup,
-        memberCount: conversation.participantIds.length,
-        status: isGroup ? "Away" : resolvePresence(otherUser),
-        typing: otherUserIds.some((participantId) =>
-          isTypingActive(conversation.typingByUserId?.[participantId]),
-        ),
-      },
+          isGroup,
+          memberCount: conversation.participantIds.length,
+          status: isGroup ? "Away" : resolvePresence(otherUser),
+          typing: otherUserIds.some((participantId) =>
+            isTypingActive(conversation.typingByUserId?.[participantId]),
+          ),
+          chatWallpaper: conversation.chatWallpaper,
+          chatWallpaperUrl: conversation.chatWallpaperUrl,
+        },
       messages,
     };
   });

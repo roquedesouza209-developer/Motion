@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { DEFAULT_CHAT_WALLPAPER } from "@/lib/chat-wallpapers";
 import { normalizeInterests } from "@/lib/interests";
 import { attachSessionCookie, toPublicUser, SESSION_MAX_AGE_SECONDS } from "@/lib/server/auth";
 import { createId, createPasswordHash } from "@/lib/server/crypto";
@@ -98,6 +99,7 @@ export async function POST(request: Request) {
       passwordSalt: salt,
       avatarGradient: AVATAR_GRADIENTS[db.users.length % AVATAR_GRADIENTS.length],
       interests,
+      chatWallpaper: DEFAULT_CHAT_WALLPAPER,
       createdAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
     };

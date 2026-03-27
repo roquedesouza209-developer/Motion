@@ -21,6 +21,7 @@ import {
   INTEREST_OPTIONS,
   type InterestKey,
 } from "@/lib/interests";
+import type { ChatWallpaper } from "@/lib/chat-wallpapers";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -66,6 +67,7 @@ type User = {
   handle: string;
   email: string;
   interests?: InterestKey[];
+  chatWallpaper?: ChatWallpaper;
   avatarGradient: string;
   avatarUrl?: string;
   bio?: string;
@@ -1008,6 +1010,7 @@ export default function Home() {
   const [themeSelection, setThemeSelection] = useState<ThemeSelection>("system");
   const [systemPrefersDark, setSystemPrefersDark] = useState(false);
   const [viewportMode, setViewportMode] = useState<ViewportMode>("desktop");
+  const [savingChatWallpaper, setSavingChatWallpaper] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -1203,6 +1206,50 @@ export default function Home() {
     setConversations(convoRes);
     setLiveSessions(liveRes.sessions ?? []);
   }, [activeFeedInterest, loadConversations]);
+
+  const saveChatWallpaper = useCallback(
+    async (wallpaper: ChatWallpaper) => {
+      if (!user || savingChatWallpaper || user.chatWallpaper === wallpaper) {
+        return;
+      }
+
+      const previousWallpaper = user.chatWallpaper;
+      setSavingChatWallpaper(true);
+      setUser((current) =>
+        current
+          ? {
+              ...current,
+              chatWallpaper: wallpaper,
+            }
+          : current,
+      );
+
+      try {
+        const payload = await req<{ user: User }>("/api/auth/profile", {
+          method: "PATCH",
+          body: JSON.stringify({ chatWallpaper: wallpaper }),
+        });
+        setUser(payload.user);
+      } catch (wallpaperError) {
+        setUser((current) =>
+          current
+            ? {
+                ...current,
+                chatWallpaper: previousWallpaper,
+              }
+            : current,
+        );
+        setError(
+          wallpaperError instanceof Error
+            ? wallpaperError.message
+            : "Failed to update chat wallpaper.",
+        );
+      } finally {
+        setSavingChatWallpaper(false);
+      }
+    },
+    [savingChatWallpaper, user],
+  );
 
   const refreshLiveSessions = useCallback(async () => {
     if (!user) {
@@ -5111,6 +5158,8 @@ export default function Home() {
         text={text}
         callStatusLabel={callStatusLabel}
         callBusy={callBusy}
+        chatWallpaper={user.chatWallpaper}
+        savingChatWallpaper={savingChatWallpaper}
         chatThreadRef={chatThreadRef}
         chatPhotoInputRef={chatPhotoInputRef}
         onClose={() => setChatOpen(false)}
@@ -5172,6 +5221,9 @@ export default function Home() {
               }
             : undefined
         }
+        onChatWallpaperChange={(wallpaper) => {
+          void saveChatWallpaper(wallpaper);
+        }}
         onDeleteRecording={(messageId) => {
           void deleteRecordingMessage(messageId);
         }}

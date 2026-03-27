@@ -1,6 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import {
+  DEFAULT_CHAT_WALLPAPER,
+  isChatWallpaper,
+  isChatWallpaperSelection,
+} from "@/lib/chat-wallpapers";
 import { normalizeInterests } from "@/lib/interests";
 import { createId, createPasswordHash } from "@/lib/server/crypto";
 import type {
@@ -103,6 +108,7 @@ function seedUser({
     passwordSalt: salt,
     avatarGradient,
     interests,
+    chatWallpaper: DEFAULT_CHAT_WALLPAPER,
     createdAt: toIsoWithMinuteOffset(-120),
     lastActiveAt:
       typeof lastActiveOffsetMinutes === "number"
@@ -1089,6 +1095,9 @@ function normalizeDatabase(raw: unknown): MotionDb {
                     user.id as keyof typeof DEFAULT_USER_INTERESTS
                   ],
                 ),
+          chatWallpaper: isChatWallpaper(user.chatWallpaper)
+            ? user.chatWallpaper
+            : DEFAULT_CHAT_WALLPAPER,
           postLayoutOrder: normalizeStringArray(user.postLayoutOrder),
           pinnedPostIds: normalizeStringArray(user.pinnedPostIds),
           lastActiveAt: normalizeLastActive(user),
@@ -1123,6 +1132,15 @@ function normalizeDatabase(raw: unknown): MotionDb {
     conversations: Array.isArray(candidate.conversations)
       ? (candidate.conversations as ConversationRecord[]).map((conversation) => ({
           ...conversation,
+          chatWallpaper: isChatWallpaperSelection(conversation.chatWallpaper)
+            ? conversation.chatWallpaper
+            : undefined,
+          chatWallpaperUrl:
+            conversation.chatWallpaper === "custom" &&
+            typeof conversation.chatWallpaperUrl === "string" &&
+            conversation.chatWallpaperUrl.startsWith("/uploads/")
+              ? conversation.chatWallpaperUrl
+              : undefined,
           typingByUserId: normalizeTypingMap(conversation.typingByUserId),
         }))
       : [],

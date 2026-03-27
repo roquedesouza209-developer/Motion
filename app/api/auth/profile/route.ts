@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isChatWallpaper } from "@/lib/chat-wallpapers";
 import { normalizeInterests } from "@/lib/interests";
 import { getAuthUser, toPublicUser } from "@/lib/server/auth";
 import { updateDb } from "@/lib/server/database";
@@ -13,6 +14,7 @@ type UpdateProfileBody = {
     feedVisibility?: string;
     hiddenFromIds?: string[];
     interests?: string[];
+    chatWallpaper?: string;
 };
 
 export async function PATCH(request: Request) {
@@ -38,6 +40,7 @@ export async function PATCH(request: Request) {
     const feedVisibility = body.feedVisibility;
     const hiddenFromIds = body.hiddenFromIds;
     const interests = body.interests !== undefined ? normalizeInterests(body.interests) : undefined;
+    const chatWallpaper = body.chatWallpaper;
 
     if (name !== undefined && name.length < 2) {
         return NextResponse.json(
@@ -120,6 +123,13 @@ export async function PATCH(request: Request) {
             userRecord.interests = interests;
         }
 
+        if (chatWallpaper !== undefined) {
+            if (!isChatWallpaper(chatWallpaper)) {
+                return { type: "invalid_wallpaper" as const };
+            }
+            userRecord.chatWallpaper = chatWallpaper;
+        }
+
         return { type: "updated" as const, user: toPublicUser(userRecord) };
     });
 
@@ -137,6 +147,13 @@ export async function PATCH(request: Request) {
     if (result.type === "creator_locked") {
         return NextResponse.json(
             { error: "Creator accounts cannot switch back to Public." },
+            { status: 400 },
+        );
+    }
+
+    if (result.type === "invalid_wallpaper") {
+        return NextResponse.json(
+            { error: "Invalid chat wallpaper." },
             { status: 400 },
         );
     }

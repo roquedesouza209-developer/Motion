@@ -89,6 +89,8 @@ export async function GET(request: Request) {
             otherTyping: typing,
           }),
           typing,
+          chatWallpaper: conversation.chatWallpaper,
+          chatWallpaperUrl: conversation.chatWallpaperUrl,
           missedCallCount,
           hasRecordingHistory: recordingHistory.length > 0,
           recordingCount: recordingHistory.length,

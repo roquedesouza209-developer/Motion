@@ -1,3 +1,5 @@
+import type { ChatWallpaper, ChatWallpaperSelection } from "@/lib/chat-wallpapers";
+
 export type FeedScope = "following" | "discover";
 export type FeedVisibility = "everyone" | "followers" | "non_followers" | "custom";
 export type PostKind = "Photo" | "Reel";
@@ -51,6 +53,7 @@ export type UserRecord = {
   avatarUrl?: string;
   bio?: string;
   interests?: InterestKey[];
+  chatWallpaper?: ChatWallpaper;
   feedVisibility?: FeedVisibility;
   hiddenFromIds?: string[];
   postLayoutOrder?: string[];
@@ -146,6 +149,8 @@ export type ConversationRecord = {
   participantIds: string[];
   unreadCountByUserId: Record<string, number>;
   typingByUserId?: Record<string, string>;
+  chatWallpaper?: ChatWallpaperSelection;
+  chatWallpaperUrl?: string;
   updatedAt: string;
 };
 
@@ -353,7 +358,7 @@ export type MotionDb = {
 export type PublicUser = Pick<
   UserRecord,
   "id" | "name" | "handle" | "role" | "accountType" | "email" | "avatarGradient" | "avatarUrl" | "bio" | "feedVisibility" | "hiddenFromIds"
-  | "interests"
+  | "interests" | "chatWallpaper"
 >;
 
 export type PostCoAuthor = Pick<
@@ -468,6 +473,8 @@ export type ConversationDto = {
   time: string;
   lastMessage: string;
   typing: boolean;
+  chatWallpaper?: ChatWallpaperSelection;
+  chatWallpaperUrl?: string;
   missedCallCount: number;
   hasRecordingHistory: boolean;
   recordingCount: number;
