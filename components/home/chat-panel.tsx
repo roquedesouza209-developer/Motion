@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
+import type { CSSProperties, FormEvent, RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Image from "next/image";
 import {
   CHAT_WALLPAPER_OPTIONS,
   DEFAULT_CHAT_WALLPAPER,
   type ChatWallpaper,
+  type ChatWallpaperSelection,
 } from "@/lib/chat-wallpapers";
 
 type Presence = "Online" | "Away";
@@ -30,6 +32,8 @@ type Conversation = {
   hasVideoCallHistory: boolean;
   hasIncomingCallHistory: boolean;
   hasOutgoingCallHistory: boolean;
+  chatWallpaper?: ChatWallpaperSelection;
+  chatWallpaperUrl?: string;
   lastCallMode?: "voice" | "video";
   lastCallEvent?: "started" | "accepted" | "declined" | "ended" | "missed";
 };
@@ -89,7 +93,9 @@ type ChatPanelProps = {
   text: string;
   callStatusLabel?: string | null;
   callBusy?: boolean;
-  chatWallpaper?: ChatWallpaper;
+  chatWallpaper?: ChatWallpaperSelection;
+  chatWallpaperUrl?: string;
+  defaultChatWallpaper?: ChatWallpaper;
   savingChatWallpaper?: boolean;
   chatThreadRef: RefObject<HTMLDivElement | null>;
   chatPhotoInputRef: RefObject<HTMLInputElement | null>;
@@ -112,6 +118,8 @@ type ChatPanelProps = {
   onStartVideoCall: () => void;
   onOpenGroupVideoCall?: () => void;
   onChatWallpaperChange?: (wallpaper: ChatWallpaper) => void;
+  onUploadChatWallpaper?: (file: File | null) => void;
+  onResetChatWallpaper?: () => void;
   onDeleteRecording?: (messageId: string) => void;
   deletingRecordingId?: string | null;
   onDeleteAllRecordings?: () => void;
@@ -277,7 +285,9 @@ export default function ChatPanel({
   text,
   callStatusLabel,
   callBusy,
-  chatWallpaper = DEFAULT_CHAT_WALLPAPER,
+  chatWallpaper,
+  chatWallpaperUrl,
+  defaultChatWallpaper = DEFAULT_CHAT_WALLPAPER,
   savingChatWallpaper = false,
   chatThreadRef,
   chatPhotoInputRef,
@@ -300,6 +310,8 @@ export default function ChatPanel({
   onStartVideoCall,
   onOpenGroupVideoCall,
   onChatWallpaperChange,
+  onUploadChatWallpaper,
+  onResetChatWallpaper,
   onDeleteRecording,
   deletingRecordingId = null,
   onDeleteAllRecordings,
@@ -310,6 +322,15 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const [wallpaperMenuOpen, setWallpaperMenuOpen] = useState(false);
   const wallpaperMenuRef = useRef<HTMLDivElement | null>(null);
+  const wallpaperInputRef = useRef<HTMLInputElement | null>(null);
+
+  const resolvedWallpaper = chatWallpaper ?? defaultChatWallpaper;
+  const chatThreadStyle =
+    resolvedWallpaper === "custom" && chatWallpaperUrl
+      ? ({
+          "--chat-custom-wallpaper-url": `url("${chatWallpaperUrl}")`,
+        } as CSSProperties)
+      : undefined;
 
   useEffect(() => {
     if (!wallpaperMenuOpen) {
@@ -689,8 +710,52 @@ export default function ChatPanel({
                       <div className="chat-wallpaper-menu">
                         <div className="chat-wallpaper-menu-header">
                           <span>Wallpaper</span>
-                          <span>{savingChatWallpaper ? "Saving..." : "Choose a look"}</span>
+                          <span>{savingChatWallpaper ? "Saving..." : "This chat only"}</span>
                         </div>
+                        <input
+                          ref={wallpaperInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            onUploadChatWallpaper?.(event.target.files?.[0] ?? null);
+                            event.target.value = "";
+                            setWallpaperMenuOpen(false);
+                          }}
+                        />
+                        <div className="chat-wallpaper-actions">
+                          <button
+                            type="button"
+                            onClick={() => wallpaperInputRef.current?.click()}
+                            className="chat-wallpaper-action"
+                            disabled={savingChatWallpaper}
+                          >
+                            Upload custom
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onResetChatWallpaper?.();
+                              setWallpaperMenuOpen(false);
+                            }}
+                            className="chat-wallpaper-action"
+                            disabled={savingChatWallpaper || chatWallpaper === undefined}
+                          >
+                            Use default
+                          </button>
+                        </div>
+                        {resolvedWallpaper === "custom" ? (
+                          <div className="chat-wallpaper-custom-preview">
+                            <span
+                              className="chat-wallpaper-swatch is-custom"
+                              style={chatThreadStyle}
+                              aria-hidden
+                            />
+                            <span className="chat-wallpaper-option-label">
+                              Custom upload
+                            </span>
+                          </div>
+                        ) : null}
                         <div className="chat-wallpaper-grid">
                           {CHAT_WALLPAPER_OPTIONS.map((option) => (
                             <button
@@ -701,7 +766,7 @@ export default function ChatPanel({
                                 setWallpaperMenuOpen(false);
                               }}
                               className={`chat-wallpaper-option ${
-                                chatWallpaper === option.id ? "is-active" : ""
+                                resolvedWallpaper === option.id ? "is-active" : ""
                               }`}
                               disabled={savingChatWallpaper}
                             >
@@ -821,7 +886,8 @@ export default function ChatPanel({
               <div
                 ref={chatThreadRef}
                 className="chat-thread space-y-2 px-4 py-3"
-                data-chat-wallpaper={chatWallpaper}
+                data-chat-wallpaper={resolvedWallpaper}
+                style={chatThreadStyle}
               >
                 {threadMessages.map((message) => (
                   message.from === "system" ? (
