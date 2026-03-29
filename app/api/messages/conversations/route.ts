@@ -54,6 +54,7 @@ export async function GET(request: Request) {
           (message) =>
             message.callEvent === "started" || message.callEvent === "missed",
         );
+        const pinned = (conversation.pinnedByUserIds ?? []).includes(user.id);
         const missedCallCount = callHistory.filter(
           (message) =>
             message.callEvent === "missed" && !(message.readByIds ?? []).includes(user.id),
@@ -80,6 +81,7 @@ export async function GET(request: Request) {
           name: conversationName,
           isGroup,
           memberCount: conversation.participantIds.length,
+          pinned,
           status: isGroup ? "Away" : resolvePresence(otherUser),
           unread: conversation.unreadCountByUserId[user.id] ?? 0,
           time: formatRelativeTime(lastMessage?.createdAt ?? conversation.updatedAt),
@@ -113,6 +115,9 @@ export async function GET(request: Request) {
         };
       })
       .sort((a, b) => {
+        if (a.pinned !== b.pinned) {
+          return a.pinned ? -1 : 1;
+        }
         const aConversation = db.conversations.find((candidate) => candidate.id === a.id);
         const bConversation = db.conversations.find((candidate) => candidate.id === b.id);
         return (

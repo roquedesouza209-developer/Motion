@@ -1134,6 +1134,7 @@ function normalizeDatabase(raw: unknown): MotionDb {
     conversations: Array.isArray(candidate.conversations)
       ? (candidate.conversations as ConversationRecord[]).map((conversation) => ({
           ...conversation,
+          pinnedByUserIds: normalizeStringIdArray(conversation.pinnedByUserIds),
           chatWallpaper: isChatWallpaperSelection(conversation.chatWallpaper)
             ? conversation.chatWallpaper
             : undefined,
@@ -1170,6 +1171,7 @@ function normalizeDatabase(raw: unknown): MotionDb {
       ? (candidate.messages as MessageRecord[]).map((message) => ({
           ...message,
           text: typeof message.text === "string" ? message.text : "",
+          replyToId: typeof message.replyToId === "string" ? message.replyToId : undefined,
           systemType: message.systemType === "call" ? "call" : undefined,
           callId: typeof message.callId === "string" ? message.callId : undefined,
           callMode:
@@ -1194,6 +1196,8 @@ function normalizeDatabase(raw: unknown): MotionDb {
           reactions: normalizeMessageReactions(message.reactions),
           deliveredToIds: normalizeStringIdArray(message.deliveredToIds),
           readByIds: normalizeStringIdArray(message.readByIds),
+          unsentAt: typeof message.unsentAt === "string" ? message.unsentAt : undefined,
+          unsentById: typeof message.unsentById === "string" ? message.unsentById : undefined,
         }))
       : [],
     callSessions: Array.isArray((candidate as { callSessions?: unknown }).callSessions)

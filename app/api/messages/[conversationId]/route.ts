@@ -4,7 +4,7 @@ import { getAuthUser } from "@/lib/server/auth";
 import { createId } from "@/lib/server/crypto";
 import { updateDb } from "@/lib/server/database";
 import { isTypingActive, mapMessageToDto, resolvePresence } from "@/lib/server/format";
-import type { ChatAttachment, MessageDto } from "@/lib/server/types";
+import type { ChatAttachment, MessageDto, MessageRecord } from "@/lib/server/types";
 
 type RouteContext = {
   params: Promise<{
@@ -15,6 +15,7 @@ type RouteContext = {
 type SendBody = {
   text?: string;
   attachment?: ChatAttachment;
+  replyToId?: string;
 };
 
 export async function GET(request: Request, context: RouteContext) {
@@ -43,8 +44,14 @@ export async function GET(request: Request, context: RouteContext) {
 
     const otherUserIds = conversation.participantIds.filter((id) => id !== user.id);
     const otherUserId = otherUserIds[0] ?? user.id;
+    const usersById = new Map(db.users.map((candidate) => [candidate.id, candidate]));
+    const messagesById = new Map(
+      db.messages
+        .filter((message) => message.conversationId === conversation.id)
+        .map((message) => [message.id, message]),
+    );
     const otherUsers = otherUserIds
-      .map((id) => db.users.find((candidate) => candidate.id === id))
+      .map((id) => usersById.get(id))
       .filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate));
     const otherUser = otherUsers[0];
     const isGroup = otherUserIds.length > 1;
@@ -68,6 +75,8 @@ export async function GET(request: Request, context: RouteContext) {
           message,
           currentUserId: user.id,
           recipientIds: otherUserIds,
+          usersById,
+          messagesById,
         });
       });
 
@@ -84,9 +93,10 @@ export async function GET(request: Request, context: RouteContext) {
           : otherUser?.name ?? "Conversation",
           isGroup,
           memberCount: conversation.participantIds.length,
+          pinned: (conversation.pinnedByUserIds ?? []).includes(user.id),
           status: isGroup ? "Away" : resolvePresence(otherUser),
-           typing: otherUserIds.some((participantId) =>
-             isTypingActive(conversation.typingByUserId?.[participantId]),
+            typing: otherUserIds.some((participantId) =>
+              isTypingActive(conversation.typingByUserId?.[participantId]),
            ),
            chatWallpaper: conversation.chatWallpaper,
            chatWallpaperUrl: conversation.chatWallpaperUrl,
@@ -129,6 +139,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const text = body.text?.trim() ?? "";
   const attachment = body.attachment;
+  const replyToId = typeof body.replyToId === "string" ? body.replyToId.trim() : "";
 
   const hasAttachment =
     attachment &&
@@ -174,12 +185,31 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const otherUserIds = conversation.participantIds.filter((id) => id !== user.id);
+    const usersById = new Map(db.users.map((candidate) => [candidate.id, candidate]));
     const now = new Date().toISOString();
+    const replySource =
+      replyToId.length > 0
+        ? db.messages.find(
+            (candidate) =>
+              candidate.id === replyToId && candidate.conversationId === conversation.id,
+          )
+        : undefined;
+
+    if (replyToId.length > 0 && !replySource) {
+      return { type: "reply_missing" as const };
+    }
+
+    const messagesById = new Map<string, MessageRecord>();
+    if (replySource) {
+      messagesById.set(replySource.id, replySource);
+    }
+
     const message = {
       id: createId("msg"),
       conversationId: conversation.id,
       senderId: user.id,
       text,
+      replyToId: replySource?.id,
       attachment: hasAttachment
         ? {
             url: attachment.url,
@@ -197,6 +227,7 @@ export async function POST(request: Request, context: RouteContext) {
       readByIds: [user.id],
       createdAt: now,
     };
+    messagesById.set(message.id, message);
 
     db.messages.push(message);
     conversation.updatedAt = now;
@@ -220,9 +251,15 @@ export async function POST(request: Request, context: RouteContext) {
           message,
           currentUserId: user.id,
           recipientIds: otherUserIds,
+          usersById,
+          messagesById,
         }),
       };
   });
+
+  if (result.type === "reply_missing") {
+    return NextResponse.json({ error: "Reply target not found." }, { status: 404 });
+  }
 
   if (result.type === "missing") {
     return NextResponse.json({ error: "Conversation not found." }, { status: 404 });

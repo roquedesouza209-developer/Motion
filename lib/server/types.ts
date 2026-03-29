@@ -148,6 +148,7 @@ export type ConversationRecord = {
   id: string;
   participantIds: string[];
   unreadCountByUserId: Record<string, number>;
+  pinnedByUserIds?: string[];
   typingByUserId?: Record<string, string>;
   chatWallpaper?: ChatWallpaperSelection;
   chatWallpaperUrl?: string;
@@ -165,6 +166,7 @@ export type MessageRecord = {
   conversationId: string;
   senderId: string;
   text: string;
+  replyToId?: string;
   systemType?: "call";
   callId?: string;
   callMode?: CallMode;
@@ -174,6 +176,8 @@ export type MessageRecord = {
   reactions?: MessageReactionRecord[];
   deliveredToIds?: string[];
   readByIds?: string[];
+  unsentAt?: string;
+  unsentById?: string;
   createdAt: string;
 };
 
@@ -452,7 +456,17 @@ export type MessageDto = {
   id: string;
   from: "them" | "me" | "system";
   text: string;
+  unsent?: boolean;
+  canUnsend?: boolean;
   createdAt: string;
+  replyTo?: {
+    id: string;
+    author: string;
+    from: "them" | "me";
+    text: string;
+    attachmentType?: ChatAttachmentType;
+    unsent?: boolean;
+  };
   systemType?: "call";
   callId?: string;
   callMode?: CallMode;
@@ -474,6 +488,7 @@ export type ConversationDto = {
   name: string;
   isGroup: boolean;
   memberCount: number;
+  pinned?: boolean;
   status: Presence;
   unread: number;
   time: string;

@@ -186,6 +186,34 @@ function buildReactionSummary({
   return [...grouped.values()];
 }
 
+function summarizeReplyPreview(message: Pick<MessageRecord, "text" | "attachment" | "unsentAt">) {
+  if (message.unsentAt) {
+    return "Message unsent";
+  }
+
+  if (message.text.trim()) {
+    return message.text.trim();
+  }
+
+  if (message.attachment?.type === "image") {
+    return "Photo";
+  }
+
+  if (message.attachment?.type === "video") {
+    return message.attachment.name?.startsWith("motion-call-recording-")
+      ? "Call recording"
+      : "Video";
+  }
+
+  if (message.attachment?.type === "audio") {
+    return message.attachment.name?.startsWith("motion-call-recording-")
+      ? "Call recording"
+      : "Voice message";
+  }
+
+  return "Message";
+}
+
 export function getMessageDeliveryState({
   message,
   recipientIds,
@@ -217,7 +245,7 @@ export function summarizeConversationMessage({
 }: {
   message?: Pick<
     MessageRecord,
-    "senderId" | "text" | "attachment" | "systemType" | "callEvent"
+    "senderId" | "text" | "attachment" | "systemType" | "callEvent" | "unsentAt"
   >;
   currentUserId: string;
   otherTyping?: boolean;
@@ -228,6 +256,12 @@ export function summarizeConversationMessage({
 
   if (!message) {
     return "No messages yet.";
+  }
+
+  if (message.unsentAt) {
+    return message.senderId === currentUserId
+      ? "You unsent a message"
+      : "Message unsent";
   }
 
   if (message.systemType === "call") {
@@ -261,11 +295,17 @@ export function mapMessageToDto({
   message,
   currentUserId,
   recipientIds,
+  usersById,
+  messagesById,
 }: {
   message: MessageRecord;
   currentUserId: string;
   recipientIds: string[];
+  usersById?: Map<string, UserRecord>;
+  messagesById?: Map<string, MessageRecord>;
 }): MessageDto {
+  const replySource = message.replyToId ? messagesById?.get(message.replyToId) : undefined;
+
   return {
     id: message.id,
     from:
@@ -275,7 +315,25 @@ export function mapMessageToDto({
           ? "me"
           : "them",
     text: message.text,
+    unsent: Boolean(message.unsentAt),
+    canUnsend:
+      message.senderId === currentUserId &&
+      message.systemType !== "call" &&
+      !message.unsentAt,
     createdAt: message.createdAt,
+    replyTo: replySource
+      ? {
+          id: replySource.id,
+          author:
+            replySource.senderId === currentUserId
+              ? "You"
+              : usersById?.get(replySource.senderId)?.name ?? "Motion",
+          from: replySource.senderId === currentUserId ? "me" : "them",
+          text: summarizeReplyPreview(replySource),
+          attachmentType: replySource.attachment?.type,
+          unsent: Boolean(replySource.unsentAt),
+        }
+      : undefined,
     systemType: message.systemType,
     callId: message.callId,
     callMode: message.callMode,

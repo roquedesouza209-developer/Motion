@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, FormEvent, RefObject } from "react";
+import type { CSSProperties, FormEvent, RefObject, TouchEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import Image from "next/image";
@@ -30,6 +30,7 @@ type Conversation = {
   id: string;
   userId: string;
   name: string;
+  pinned?: boolean;
   status: Presence;
   unread: number;
   time: string;
@@ -72,7 +73,17 @@ type Message = {
   id: string;
   from: "them" | "me" | "system";
   text: string;
+  unsent?: boolean;
+  canUnsend?: boolean;
   createdAt: string;
+  replyTo?: {
+    id: string;
+    author: string;
+    from: "them" | "me";
+    text: string;
+    attachmentType?: ChatAttachment["type"];
+    unsent?: boolean;
+  };
   systemType?: "call";
   callId?: string;
   callMode?: "voice" | "video";
@@ -91,6 +102,7 @@ type ChatPanelProps = {
   searchPlaceholder?: string;
   availableTabs?: MessagePanelTab[];
   chatSearch: string;
+  threadSearch?: string;
   messageTab: MessagePanelTab;
   callTypeFilter: CallTypeFilter;
   callDirectionFilter: CallDirectionFilter;
@@ -119,10 +131,12 @@ type ChatPanelProps = {
   chatWallpaperDim?: number;
   defaultChatWallpaper?: ChatWallpaper;
   savingChatWallpaper?: boolean;
+  pinningConversation?: boolean;
   chatThreadRef: RefObject<HTMLDivElement | null>;
   chatPhotoInputRef: RefObject<HTMLInputElement | null>;
   onClose: () => void;
   onChatSearchChange: (value: string) => void;
+  onThreadSearchChange?: (value: string) => void;
   onMessageTabChange: (value: MessagePanelTab) => void;
   onCallTypeFilterChange: (value: CallTypeFilter) => void;
   onCallDirectionFilterChange: (value: CallDirectionFilter) => void;
@@ -131,7 +145,11 @@ type ChatPanelProps = {
   onClearChatSearch: () => void;
   onSelectConversation: (conversationId: string) => void;
   onBack: () => void;
+  onTogglePinConversation?: (conversationId: string) => void;
   onToggleReactionMenu: (messageId: string) => void;
+  onReplyToMessage?: (messageId: string) => void;
+  replyingToMessage?: Message | null;
+  onClearReplyTo?: () => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
   onMessageInputChange: (value: string) => void;
   onChatPhotoSelection: (files: FileList | null) => void;
@@ -144,6 +162,8 @@ type ChatPanelProps = {
   onResetChatWallpaper?: (target: ChatWallpaperTarget) => void;
   onChatWallpaperEffectsChange?: (effects: { blur: number; dim: number }) => void;
   onDeleteRecording?: (messageId: string) => void;
+  onUnsendMessage?: (messageId: string) => void;
+  unsendingMessageId?: string | null;
   deletingRecordingId?: string | null;
   onDeleteAllRecordings?: () => void;
   deletingAllRecordings?: boolean;
@@ -206,6 +226,28 @@ function formatCallDuration(durationMs?: number): string | null {
   }
 
   return `${seconds}s`;
+}
+
+function messageMatchesThreadSearch(message: Message, query: string) {
+  const normalized = query.trim().toLowerCase();
+
+  if (!normalized) {
+    return true;
+  }
+
+  const searchableParts = [
+    message.text,
+    message.unsent ? "message unsent" : "",
+    message.replyTo?.text,
+    message.replyTo?.author,
+    message.attachment?.type,
+    message.callMode,
+    message.callEvent,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.toLowerCase());
+
+  return searchableParts.some((value) => value.includes(normalized));
 }
 
 function isCallRecordingAttachment(attachment?: ChatAttachment): boolean {
@@ -382,6 +424,7 @@ export default function ChatPanel({
   searchPlaceholder = "Search threads...",
   availableTabs = ["chats", "calls", "recordings"],
   chatSearch,
+  threadSearch = "",
   messageTab,
   callTypeFilter,
   callDirectionFilter,
@@ -410,10 +453,12 @@ export default function ChatPanel({
   chatWallpaperDim = DEFAULT_CHAT_WALLPAPER_DIM,
   defaultChatWallpaper = DEFAULT_CHAT_WALLPAPER,
   savingChatWallpaper = false,
+  pinningConversation = false,
   chatThreadRef,
   chatPhotoInputRef,
   onClose,
   onChatSearchChange,
+  onThreadSearchChange,
   onMessageTabChange,
   onCallTypeFilterChange,
   onCallDirectionFilterChange,
@@ -422,7 +467,11 @@ export default function ChatPanel({
   onClearChatSearch,
   onSelectConversation,
   onBack,
+  onTogglePinConversation,
   onToggleReactionMenu,
+  onReplyToMessage,
+  replyingToMessage = null,
+  onClearReplyTo,
   onToggleReaction,
   onMessageInputChange,
   onChatPhotoSelection,
@@ -435,6 +484,8 @@ export default function ChatPanel({
   onResetChatWallpaper,
   onChatWallpaperEffectsChange,
   onDeleteRecording,
+  onUnsendMessage,
+  unsendingMessageId = null,
   deletingRecordingId = null,
   onDeleteAllRecordings,
   deletingAllRecordings = false,
@@ -447,8 +498,14 @@ export default function ChatPanel({
   const [wallpaperTarget, setWallpaperTarget] = useState<ChatWallpaperTarget>("all");
   const [blurDraft, setBlurDraft] = useState(chatWallpaperBlur);
   const [dimDraft, setDimDraft] = useState(chatWallpaperDim);
+  const [swipeReplyPreview, setSwipeReplyPreview] = useState<{
+    messageId: string;
+    offset: number;
+  } | null>(null);
   const wallpaperMenuRef = useRef<HTMLDivElement | null>(null);
   const wallpaperInputRef = useRef<HTMLInputElement | null>(null);
+  const swipeStartXRef = useRef<number | null>(null);
+  const swipeMessageIdRef = useRef<string | null>(null);
 
   const selectedWallpaperState = getWallpaperSlotState(
     {
@@ -578,7 +635,64 @@ export default function ChatPanel({
       : messageTab === "recordings"
         ? messages.filter((message) => isCallRecordingAttachment(message.attachment))
       : messages;
+  const normalizedThreadSearch = threadSearch.trim().toLowerCase();
+  const visibleThreadMessages = normalizedThreadSearch
+    ? threadMessages.filter((message) => messageMatchesThreadSearch(message, normalizedThreadSearch))
+    : threadMessages;
+  const threadSearchMatches = visibleThreadMessages.length;
   const activeRecordingCount = activeConversation?.recordingCount ?? 0;
+
+  const handleMessageTouchStart = (messageId: string) => (event: TouchEvent<HTMLDivElement>) => {
+    if (messageTab !== "chats" || !onReplyToMessage) {
+      return;
+    }
+
+    swipeStartXRef.current = event.touches[0]?.clientX ?? null;
+    swipeMessageIdRef.current = messageId;
+    setSwipeReplyPreview({ messageId, offset: 0 });
+  };
+
+  const handleMessageTouchMove =
+    (messageId: string, from: Message["from"]) => (event: TouchEvent<HTMLDivElement>) => {
+      if (
+        messageTab !== "chats" ||
+        !onReplyToMessage ||
+        swipeMessageIdRef.current !== messageId ||
+        swipeStartXRef.current === null
+      ) {
+        return;
+      }
+
+      const delta = event.touches[0]?.clientX - swipeStartXRef.current;
+      if (typeof delta !== "number") {
+        return;
+      }
+
+      const directionalDelta = from === "me" ? Math.max(0, -delta) : Math.max(0, delta);
+      setSwipeReplyPreview({
+        messageId,
+        offset: Math.min(directionalDelta, 72),
+      });
+    };
+
+  const resetSwipeReply = () => {
+    swipeStartXRef.current = null;
+    swipeMessageIdRef.current = null;
+    setSwipeReplyPreview(null);
+  };
+
+  const handleMessageTouchEnd = (messageId: string) => () => {
+    if (
+      messageTab === "chats" &&
+      onReplyToMessage &&
+      swipeReplyPreview?.messageId === messageId &&
+      swipeReplyPreview.offset >= 54
+    ) {
+      onReplyToMessage(messageId);
+    }
+
+    resetSwipeReply();
+  };
 
   return (
     <section
@@ -786,86 +900,117 @@ export default function ChatPanel({
               );
 
               return (
-                <button
+                <div
                   key={conversation.id}
-                  onClick={() => onSelectConversation(conversation.id)}
                   className={`chat-convo-item ${activeId === conversation.id ? "is-active" : ""}`}
-                  type="button"
                 >
-                  <div
-                    className="chat-avatar"
-                    style={{ background: gradients[gradientIndex] }}
+                  <button
+                    onClick={() => onSelectConversation(conversation.id)}
+                    className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                    type="button"
                   >
-                    {initials}
-                    {isActive ? <span className="presence-dot" /> : null}
-                  </div>
-                  <span
-                    className={`chat-convo-wallpaper-preview is-${conversationPreview.wallpaper}`}
-                    style={buildWallpaperStyle({
-                      wallpaper: conversationPreview.wallpaper,
-                      url: conversationPreview.url,
-                    })}
-                    aria-hidden
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-semibold text-slate-900">
-                        {conversation.name}
-                      </span>
-                      <span className="shrink-0 text-[10px] text-slate-500">
-                        {conversation.time}
-                      </span>
-                    </span>
-                    <span className="mt-0.5 flex items-center justify-between gap-2">
-                      <span className="min-w-0 flex-1">
-                        <span
-                          className={`block truncate text-xs ${
-                            conversation.typing
-                              ? "font-semibold text-[var(--brand)]"
-                              : "text-slate-500"
-                          }`}
-                        >
-                          {conversation.typing
-                            ? "Typing..."
-                            : isActive
-                              ? "Active now"
-                              : conversation.lastMessage}
+                    <div
+                      className="chat-avatar"
+                      style={{ background: gradients[gradientIndex] }}
+                    >
+                      {initials}
+                      {isActive ? <span className="presence-dot" /> : null}
+                    </div>
+                    <span
+                      className={`chat-convo-wallpaper-preview is-${conversationPreview.wallpaper}`}
+                      style={buildWallpaperStyle({
+                        wallpaper: conversationPreview.wallpaper,
+                        url: conversationPreview.url,
+                      })}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold text-slate-900">
+                          {conversation.name}
                         </span>
-                        <span className="mt-1 flex flex-wrap gap-1">
-                          {conversation.missedCallCount > 0 ? (
-                            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
-                              {conversation.missedCallCount} missed
-                            </span>
-                          ) : null}
-                          {conversation.lastCallMode ? (
-                            <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                              {conversation.lastCallMode === "video" ? "Video" : "Voice"}
-                            </span>
-                          ) : null}
-                          {messageTab === "recordings" && conversation.hasRecordingHistory ? (
-                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
-                              {conversation.recordingCount} recording
-                              {conversation.recordingCount === 1 ? "" : "s"}
-                            </span>
-                          ) : null}
-                          {messageTab !== "recordings" &&
-                          conversation.recordingCount > 0 ? (
-                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
-                              {conversation.recordingCount}
-                            </span>
-                          ) : null}
+                        <span className="shrink-0 text-[10px] text-slate-500">
+                          {conversation.time}
                         </span>
                       </span>
-                      <span className="flex shrink-0 flex-col items-end gap-1">
-                        {conversation.unread > 0 ? (
-                          <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-white">
-                            {conversation.unread}
+                      <span className="mt-0.5 flex items-center justify-between gap-2">
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={`block truncate text-xs ${
+                              conversation.typing
+                                ? "font-semibold text-[var(--brand)]"
+                                : "text-slate-500"
+                            }`}
+                          >
+                            {conversation.typing
+                              ? "Typing..."
+                              : isActive
+                                ? "Active now"
+                                : conversation.lastMessage}
                           </span>
-                        ) : null}
+                          <span className="mt-1 flex flex-wrap gap-1">
+                            {conversation.pinned ? (
+                              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600">
+                                Pinned
+                              </span>
+                            ) : null}
+                            {conversation.missedCallCount > 0 ? (
+                              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
+                                {conversation.missedCallCount} missed
+                              </span>
+                            ) : null}
+                            {conversation.lastCallMode ? (
+                              <span className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                                {conversation.lastCallMode === "video" ? "Video" : "Voice"}
+                              </span>
+                            ) : null}
+                            {messageTab === "recordings" && conversation.hasRecordingHistory ? (
+                              <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
+                                {conversation.recordingCount} recording
+                                {conversation.recordingCount === 1 ? "" : "s"}
+                              </span>
+                            ) : null}
+                            {messageTab !== "recordings" &&
+                            conversation.recordingCount > 0 ? (
+                              <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
+                                {conversation.recordingCount}
+                              </span>
+                            ) : null}
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 flex-col items-end gap-1">
+                          {conversation.unread > 0 ? (
+                            <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-white">
+                              {conversation.unread}
+                            </span>
+                          ) : null}
+                        </span>
                       </span>
                     </span>
-                  </span>
-                </button>
+                  </button>
+                  {onTogglePinConversation ? (
+                    <button
+                      type="button"
+                      onClick={() => onTogglePinConversation(conversation.id)}
+                      className="chat-header-button ml-2 mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full disabled:opacity-60"
+                      aria-label={conversation.pinned ? "Unpin chat" : "Pin chat"}
+                      title={conversation.pinned ? "Unpin chat" : "Pin chat"}
+                      disabled={pinningConversation}
+                    >
+                      <svg
+                        viewBox="0 0 20 20"
+                        className="h-4 w-4"
+                        fill={conversation.pinned ? "currentColor" : "none"}
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M6.7 3.5h6.6l-1.2 4.2 2.1 2.1v1H10.7V16l-1.4.9-.7-.9v-5.2H5.8v-1l2.1-2.1Z" />
+                      </svg>
+                    </button>
+                  ) : null}
+                </div>
               );
             })}
             {filteredConversations.length === 0 ? (
@@ -889,7 +1034,8 @@ export default function ChatPanel({
         <div className="chat-thread-column">
           {activeId ? (
             <div className="chat-thread-wrap flex flex-1 flex-col">
-              <div className="chat-thread-header flex items-center justify-between gap-3 px-4 py-2.5">
+              <div className="chat-thread-header space-y-3 px-4 py-2.5">
+                <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-slate-900">
                     {activeConversation?.name ?? "Conversation"}
@@ -1158,6 +1304,28 @@ export default function ChatPanel({
                       </svg>
                     </button>
                   ) : null}
+                  {onTogglePinConversation && activeConversation ? (
+                    <button
+                      type="button"
+                      onClick={() => onTogglePinConversation(activeConversation.id)}
+                      className="chat-header-button grid h-8 w-8 place-items-center rounded-full disabled:opacity-60"
+                      aria-label={activeConversation.pinned ? "Unpin chat" : "Pin chat"}
+                      title={activeConversation.pinned ? "Unpin chat" : "Pin chat"}
+                      disabled={pinningConversation}
+                    >
+                      <svg
+                        viewBox="0 0 20 20"
+                        className="h-4 w-4"
+                        fill={activeConversation.pinned ? "currentColor" : "none"}
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M6.7 3.5h6.6l-1.2 4.2 2.1 2.1v1H10.7V16l-1.4.9-.7-.9v-5.2H5.8v-1l2.1-2.1Z" />
+                      </svg>
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={onBack}
@@ -1166,6 +1334,57 @@ export default function ChatPanel({
                     Back
                   </button>
                 </div>
+                </div>
+                {onThreadSearchChange ? (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="relative flex-1">
+                      <input
+                        value={threadSearch}
+                        onChange={(event) => onThreadSearchChange(event.target.value)}
+                        className="h-9 w-full rounded-full border border-[var(--line)] bg-white/80 px-4 text-xs text-slate-600 outline-none transition focus:border-[var(--brand)]"
+                        placeholder="Search inside this thread..."
+                        aria-label="Search inside this thread"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {normalizedThreadSearch ? (
+                        <span className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                          {threadSearchMatches} match{threadSearchMatches === 1 ? "" : "es"}
+                        </span>
+                      ) : null}
+                      {replyingToMessage ? (
+                        <div className="flex items-center gap-2 rounded-2xl border border-[var(--line)] bg-white/80 px-3 py-2 text-[11px] text-slate-600">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-800">
+                              Replying to {replyingToMessage.from === "me" ? "You" : activeConversation?.name ?? "them"}
+                            </p>
+                            <p className="max-w-[18rem] truncate text-slate-500">
+                              {replyingToMessage.unsent
+                                ? "Message unsent"
+                                : replyingToMessage.text ||
+                                  (replyingToMessage.attachment?.type === "image"
+                                    ? "Photo"
+                                    : replyingToMessage.attachment?.type === "video"
+                                      ? "Video"
+                                      : replyingToMessage.attachment?.type === "audio"
+                                        ? "Voice message"
+                                        : "Message")}
+                            </p>
+                          </div>
+                          {onClearReplyTo ? (
+                            <button
+                              type="button"
+                              onClick={onClearReplyTo}
+                              className="rounded-full border border-[var(--line)] px-2 py-1 text-[10px] font-semibold text-slate-500"
+                            >
+                              Clear
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
               </div>
               <div
                 ref={chatThreadRef}
@@ -1173,9 +1392,9 @@ export default function ChatPanel({
                 data-chat-wallpaper={resolvedWallpaper}
                 style={chatThreadStyle}
               >
-                {threadMessages.map((message) => (
-                  message.from === "system" ? (
-                    <div key={message.id} className="flex justify-center py-1">
+                {visibleThreadMessages.map((message) => (
+                   message.from === "system" ? (
+                     <div key={message.id} className="flex justify-center py-1">
                       <div className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-500 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.6)]">
                         <CallLogIcon
                           direction={message.callDirection}
@@ -1192,14 +1411,40 @@ export default function ChatPanel({
                         </span>
                       </div>
                     </div>
-                  ) : (
-                  <div
-                    key={message.id}
-                    className={`chat-message ${message.from === "me" ? "is-me" : "is-them"}`}
-                  >
-                    <div
-                      className={`chat-message-shell ${
-                        message.from === "me" ? "is-me" : "is-them"
+                   ) : (
+                   <div
+                     key={message.id}
+                     className={`chat-message ${message.from === "me" ? "is-me" : "is-them"}`}
+                     style={
+                       swipeReplyPreview?.messageId === message.id
+                         ? {
+                             transform: `translateX(${
+                               message.from === "me"
+                                 ? -swipeReplyPreview.offset
+                                 : swipeReplyPreview.offset
+                             }px)`,
+                             transition: "transform 120ms ease-out",
+                           }
+                         : undefined
+                     }
+                     onTouchStart={handleMessageTouchStart(message.id)}
+                     onTouchMove={handleMessageTouchMove(message.id, message.from)}
+                     onTouchEnd={handleMessageTouchEnd(message.id)}
+                     onTouchCancel={resetSwipeReply}
+                   >
+                     {swipeReplyPreview?.messageId === message.id &&
+                     swipeReplyPreview.offset > 10 ? (
+                       <div
+                         className={`mb-1 flex text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)] ${
+                           message.from === "me" ? "justify-end" : "justify-start"
+                         }`}
+                       >
+                         Reply
+                       </div>
+                     ) : null}
+                     <div
+                       className={`chat-message-shell ${
+                         message.from === "me" ? "is-me" : "is-them"
                       }`}
                     >
                       <div className="chat-message-label">
@@ -1211,11 +1456,21 @@ export default function ChatPanel({
                         <span aria-hidden>{"//"}</span>
                         <span>{formatChatTime(message.createdAt)}</span>
                       </div>
-                      <div
-                        className={`chat-bubble ${message.from === "me" ? "is-me" : "is-them"}`}
-                      >
-                        {isCallRecordingAttachment(message.attachment) ? (
-                          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-rose-200/70 bg-rose-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-100">
+                       <div
+                         className={`chat-bubble ${message.from === "me" ? "is-me" : "is-them"}`}
+                       >
+                         {!message.unsent && message.replyTo ? (
+                           <div className="mb-2 rounded-2xl border border-white/18 bg-white/8 px-3 py-2 text-[11px] text-white/80">
+                             <p className="font-semibold text-white/95">
+                               {message.replyTo.author}
+                             </p>
+                             <p className="truncate">
+                               {message.replyTo.text}
+                             </p>
+                           </div>
+                         ) : null}
+                         {isCallRecordingAttachment(message.attachment) ? (
+                           <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-rose-200/70 bg-rose-500/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-100">
                             <span className="h-2 w-2 rounded-full bg-rose-300" />
                             <span>Call recording</span>
                           </div>
@@ -1247,8 +1502,8 @@ export default function ChatPanel({
                             />
                           </div>
                         ) : null}
-                        {message.attachment?.type === "audio" ? (
-                          <div className="chat-voice-note">
+                         {message.attachment?.type === "audio" ? (
+                           <div className="chat-voice-note">
                             <div className="chat-voice-pill">
                               <svg
                                 viewBox="0 0 20 20"
@@ -1278,10 +1533,18 @@ export default function ChatPanel({
                                   : "voice message"}
                               </p>
                             </div>
-                          </div>
-                        ) : null}
-                        {message.text ? <p className="chat-bubble-text">{message.text}</p> : null}
-                        {isCallRecordingAttachment(message.attachment) ? (
+                           </div>
+                         ) : null}
+                         {message.unsent ? (
+                           <p className="chat-bubble-text italic text-white/70">
+                             {message.from === "me"
+                               ? "You unsent a message."
+                               : "This message was unsent."}
+                           </p>
+                         ) : message.text ? (
+                           <p className="chat-bubble-text">{message.text}</p>
+                         ) : null}
+                         {isCallRecordingAttachment(message.attachment) ? (
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <a
                               href={message.attachment?.url}
@@ -1312,9 +1575,9 @@ export default function ChatPanel({
                         ) : null}
                       </div>
                     </div>
-                    {message.reactions.length > 0 ? (
-                      <div
-                        className={`mt-1 flex flex-wrap gap-1 ${
+                     {!message.unsent && message.reactions.length > 0 ? (
+                       <div
+                         className={`mt-1 flex flex-wrap gap-1 ${
                           message.from === "me" ? "justify-end" : "justify-start"
                         }`}
                       >
@@ -1331,45 +1594,85 @@ export default function ChatPanel({
                         ))}
                       </div>
                     ) : null}
-                    <div
-                      className={`mt-1 flex ${
-                        message.from === "me" ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => onToggleReactionMenu(message.id)}
-                          className="chat-react-trigger"
-                          aria-label="React to message"
-                        >
-                          {"\u{1F642}"}
-                        </button>
-                        {reactionMenuId === message.id ? (
-                          <div className="chat-reaction-picker">
-                            {chatReactions.map((emoji) => (
-                              <button
-                                key={`${message.id}-${emoji}`}
-                                type="button"
-                                onClick={() => onToggleReaction(message.id, emoji)}
-                                className="chat-reaction-option"
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
+                     <div
+                       className={`mt-1 flex ${
+                         message.from === "me" ? "justify-end" : "justify-start"
+                       }`}
+                     >
+                       <div className="relative flex items-center gap-2">
+                         {onReplyToMessage && !message.unsent ? (
+                           <button
+                             type="button"
+                             onClick={() => onReplyToMessage(message.id)}
+                             className="chat-react-trigger"
+                             aria-label="Reply to message"
+                             title="Reply"
+                           >
+                             ↩
+                           </button>
+                         ) : null}
+                         {!message.unsent ? (
+                           <div className="relative">
+                             <button
+                               type="button"
+                               onClick={() => onToggleReactionMenu(message.id)}
+                               className="chat-react-trigger"
+                               aria-label="React to message"
+                             >
+                               {"\u{1F642}"}
+                             </button>
+                             {reactionMenuId === message.id ? (
+                               <div className="chat-reaction-picker">
+                                 {chatReactions.map((emoji) => (
+                                   <button
+                                     key={`${message.id}-${emoji}`}
+                                     type="button"
+                                     onClick={() => onToggleReaction(message.id, emoji)}
+                                     className="chat-reaction-option"
+                                   >
+                                     {emoji}
+                                   </button>
+                                 ))}
+                               </div>
+                             ) : null}
+                           </div>
+                         ) : null}
+                         {onUnsendMessage && message.canUnsend ? (
+                           <button
+                             type="button"
+                             onClick={() => onUnsendMessage(message.id)}
+                             disabled={unsendingMessageId === message.id}
+                             className="chat-react-trigger"
+                             aria-label="Unsend message"
+                             title="Unsend"
+                           >
+                             {unsendingMessageId === message.id ? "..." : "Unsend"}
+                           </button>
+                         ) : null}
+                       </div>
+                     </div>
+                   </div>
+                   )
+                 ))}
+                {normalizedThreadSearch && visibleThreadMessages.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
+                    No messages in this thread match “{threadSearch}”.
                   </div>
-                  )
-                ))}
+                ) : null}
                 {(messageTab === "calls" || messageTab === "recordings") &&
-                threadMessages.length === 0 ? (
+                visibleThreadMessages.length === 0 &&
+                !normalizedThreadSearch ? (
                   <div className="rounded-2xl border border-dashed border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
                     {messageTab === "recordings"
                       ? "No saved recordings in this thread yet."
                       : "No call history or saved recordings in this thread yet."}
+                  </div>
+                ) : null}
+                {messageTab === "chats" &&
+                visibleThreadMessages.length === 0 &&
+                !normalizedThreadSearch ? (
+                  <div className="rounded-2xl border border-dashed border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
+                    No messages in this thread yet.
                   </div>
                 ) : null}
                 {messageTab === "chats" && activeConversation?.typing ? (
@@ -1381,7 +1684,38 @@ export default function ChatPanel({
                 ) : null}
               </div>
               {messageTab === "chats" ? (
-                <form onSubmit={onSubmit} className="chat-composer flex gap-2 px-3 py-2.5">
+                <form onSubmit={onSubmit} className="chat-composer px-3 py-2.5">
+                {replyingToMessage ? (
+                  <div className="mb-2 flex items-start justify-between gap-3 rounded-2xl border border-[var(--line)] bg-white/75 px-3 py-2 text-[11px] text-slate-600">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-800">
+                        Replying to {replyingToMessage.from === "me" ? "You" : activeConversation?.name ?? "them"}
+                      </p>
+                      <p className="truncate text-slate-500">
+                        {replyingToMessage.unsent
+                          ? "Message unsent"
+                          : replyingToMessage.text ||
+                            (replyingToMessage.attachment?.type === "image"
+                              ? "Photo"
+                              : replyingToMessage.attachment?.type === "video"
+                                ? "Video"
+                                : replyingToMessage.attachment?.type === "audio"
+                                  ? "Voice message"
+                                  : "Message")}
+                      </p>
+                    </div>
+                    {onClearReplyTo ? (
+                      <button
+                        type="button"
+                        onClick={onClearReplyTo}
+                        className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[10px] font-semibold text-slate-500"
+                      >
+                        Clear
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+                <div className="flex gap-2">
                 <input
                   ref={chatPhotoInputRef}
                   type="file"
@@ -1467,6 +1801,7 @@ export default function ChatPanel({
                     <path d="m18 2-7 18-3-8-8-3z" />
                   </svg>
                 </button>
+                </div>
                 </form>
               ) : (
                 <div className="border-t border-[var(--line)] px-4 py-3 text-[11px] font-semibold text-slate-500">

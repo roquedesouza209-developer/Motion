@@ -175,6 +175,7 @@ export default function MessagesPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messageTab, setMessageTab] = useState<MessagePanelTab>("chats");
   const [chatSearch, setChatSearch] = useState("");
+  const [threadSearch, setThreadSearch] = useState("");
   const [text, setText] = useState("");
   const [callTypeFilter, setCallTypeFilter] = useState<CallTypeFilter>("all");
   const [callDirectionFilter, setCallDirectionFilter] =
@@ -187,12 +188,15 @@ export default function MessagesPage() {
   const [currentCallStatusLabel, setCurrentCallStatusLabel] = useState("");
   const [markingMissedCallsSeen, setMarkingMissedCallsSeen] = useState(false);
   const [savingChatWallpaper, setSavingChatWallpaper] = useState(false);
+  const [pinningConversation, setPinningConversation] = useState(false);
   const [deletingRecordingId, setDeletingRecordingId] = useState<string | null>(null);
   const [bulkDeletingRecordings, setBulkDeletingRecordings] = useState(false);
   const [chatUploading, setChatUploading] = useState(false);
   const [chatSending, setChatSending] = useState(false);
+  const [unsendingMessageId, setUnsendingMessageId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [reactionMenuId, setReactionMenuId] = useState<string | null>(null);
+  const [replyingToMessageId, setReplyingToMessageId] = useState<string | null>(null);
   const [groupCallOpen, setGroupCallOpen] = useState(false);
   const [groupCallQuery, setGroupCallQuery] = useState("");
   const [groupCallResults, setGroupCallResults] = useState<UserSearchResult[]>([]);
@@ -635,6 +639,13 @@ export default function MessagesPage() {
       conversations.find((conversation) => conversation.id === activeId) ?? null,
     [activeId, conversations],
   );
+  const replyingToMessage = useMemo(
+    () =>
+      replyingToMessageId
+        ? messages.find((message) => message.id === replyingToMessageId) ?? null
+        : null,
+    [messages, replyingToMessageId],
+  );
 
   const groupCallSelectionSet = useMemo(
     () => new Set(groupCallSelectionIds),
@@ -814,6 +825,21 @@ export default function MessagesPage() {
       window.clearTimeout(handle);
     };
   }, [activeId, conversations, groupCallOpen, groupCallQuery, user]);
+
+  useEffect(() => {
+    setThreadSearch("");
+    setReplyingToMessageId(null);
+    setReactionMenuId(null);
+  }, [activeId]);
+
+  useEffect(() => {
+    if (
+      replyingToMessageId &&
+      !messages.some((message) => message.id === replyingToMessageId)
+    ) {
+      setReplyingToMessageId(null);
+    }
+  }, [messages, replyingToMessageId]);
 
   const startGlobalCall = useCallback(
     (mode: CallMode) => {
@@ -1265,10 +1291,12 @@ export default function MessagesPage() {
           body: JSON.stringify({
             text: nextText ?? "",
             attachment,
+            replyToId: replyingToMessageId ?? undefined,
           }),
         });
         setMessages((current) => [...current, message]);
         setText("");
+        setReplyingToMessageId(null);
         setReactionMenuId(null);
         await loadConversations();
       } catch (sendError) {
@@ -1277,7 +1305,7 @@ export default function MessagesPage() {
         setChatSending(false);
       }
     },
-    [activeId, clearTypingState, loadConversations],
+    [activeId, clearTypingState, loadConversations, replyingToMessageId],
   );
 
   const send = useCallback(
@@ -1470,6 +1498,85 @@ export default function MessagesPage() {
     [activeId, updateMessageInState],
   );
 
+  const togglePinConversation = useCallback(async (conversationId: string) => {
+    if (!conversationId || pinningConversation) {
+      return;
+    }
+
+    setPinningConversation(true);
+    setError(null);
+
+    try {
+      const payload = await req<{ pinned: boolean }>(`/api/messages/${conversationId}/pin`, {
+        method: "POST",
+      });
+
+      setConversations((current) => {
+        const next = current.map((conversation) =>
+          conversation.id === conversationId
+            ? { ...conversation, pinned: payload.pinned }
+            : conversation,
+        );
+
+        return [...next].sort((a, b) => {
+          if (Boolean(a.pinned) !== Boolean(b.pinned)) {
+            return a.pinned ? -1 : 1;
+          }
+
+          return 0;
+        });
+      });
+
+      await loadConversations();
+    } catch (pinError) {
+      setError(pinError instanceof Error ? pinError.message : "Could not update pinned chat.");
+    } finally {
+      setPinningConversation(false);
+    }
+  }, [loadConversations, pinningConversation]);
+
+  const unsendMessage = useCallback(
+    async (messageId: string) => {
+      if (!activeId || unsendingMessageId) {
+        return;
+      }
+
+      const confirmed =
+        typeof window === "undefined"
+          ? true
+          : window.confirm("Unsend this message for everyone?");
+
+      if (!confirmed) {
+        return;
+      }
+
+      setUnsendingMessageId(messageId);
+      setError(null);
+
+      try {
+        const payload = await req<{ message: MessageDto }>(
+          `/api/messages/${activeId}/${messageId}`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({ action: "unsend" }),
+          },
+        );
+
+        updateMessageInState(payload.message);
+        await loadConversations();
+      } catch (unsendError) {
+        setError(
+          unsendError instanceof Error
+            ? unsendError.message
+            : "Could not unsend the message.",
+        );
+      } finally {
+        setUnsendingMessageId(null);
+      }
+    },
+    [activeId, loadConversations, unsendingMessageId, updateMessageInState],
+  );
+
   const clearGroupCallPicker = useCallback(() => {
     setGroupCallOpen(false);
     setGroupCallQuery("");
@@ -1541,6 +1648,9 @@ export default function MessagesPage() {
     (nextTab: MessagePanelTab) => {
       setMessageTab(nextTab);
       setReactionMenuId(null);
+      if (nextTab !== "chats") {
+        setReplyingToMessageId(null);
+      }
 
       if (nextTab !== "chats") {
         clearTypingState(activeIdRef.current);
@@ -1569,6 +1679,19 @@ export default function MessagesPage() {
 
     router.push(`/calls${params.size > 0 ? `?${params.toString()}` : ""}`);
   }, [activeId, callDirectionFilter, callTypeFilter, router]);
+
+  const handleSelectConversation = useCallback((conversationId: string) => {
+    setActiveId(conversationId);
+    setThreadSearch("");
+    setReplyingToMessageId(null);
+    setReactionMenuId(null);
+  }, []);
+
+  const handleReplyToMessage = useCallback((messageId: string) => {
+    setReplyingToMessageId(messageId);
+    setReactionMenuId(null);
+    setMessageTab("chats");
+  }, []);
 
   return (
     <main className="motion-shell min-h-screen px-4 py-6" data-viewport={viewportMode}>
@@ -1676,10 +1799,13 @@ export default function MessagesPage() {
             chatWallpaperDim={activeConversation?.chatWallpaperDim}
             defaultChatWallpaper={user?.chatWallpaper}
             savingChatWallpaper={savingChatWallpaper}
+            pinningConversation={pinningConversation}
             chatThreadRef={chatThreadRef}
             chatPhotoInputRef={chatPhotoInputRef}
             onClose={() => router.push("/")}
             onChatSearchChange={setChatSearch}
+            threadSearch={threadSearch}
+            onThreadSearchChange={setThreadSearch}
             onMessageTabChange={handleMessageTabChange}
             onCallTypeFilterChange={setCallTypeFilter}
             onCallDirectionFilterChange={setCallDirectionFilter}
@@ -1688,11 +1814,22 @@ export default function MessagesPage() {
             }}
             onOpenCallsPage={openCallsPage}
             onClearChatSearch={() => setChatSearch("")}
-            onSelectConversation={setActiveId}
-            onBack={() => setActiveId(null)}
+            onSelectConversation={handleSelectConversation}
+            onBack={() => {
+              setActiveId(null);
+              setThreadSearch("");
+              setReplyingToMessageId(null);
+              setReactionMenuId(null);
+            }}
+            onTogglePinConversation={(conversationId) => {
+              void togglePinConversation(conversationId);
+            }}
             onToggleReactionMenu={(messageId) =>
               setReactionMenuId((current) => (current === messageId ? null : messageId))
             }
+            onReplyToMessage={handleReplyToMessage}
+            replyingToMessage={replyingToMessage}
+            onClearReplyTo={() => setReplyingToMessageId(null)}
             onToggleReaction={(messageId, emoji) => {
               void toggleReaction(messageId, emoji);
             }}
@@ -1731,6 +1868,10 @@ export default function MessagesPage() {
             onDeleteRecording={(messageId) => {
               void deleteRecordingMessage(messageId);
             }}
+            onUnsendMessage={(messageId) => {
+              void unsendMessage(messageId);
+            }}
+            unsendingMessageId={unsendingMessageId}
             deletingRecordingId={deletingRecordingId}
             onDeleteAllRecordings={() => {
               void deleteAllRecordingsInThread();

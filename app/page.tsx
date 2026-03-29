@@ -1,7 +1,6 @@
 "use client";
 
 import CaptionWithHashtags from "@/components/caption-with-hashtags";
-import ChatPanel from "@/components/home/chat-panel";
 import AuthScreen from "@/components/home/auth-screen";
 import CreateContentModal from "@/components/home/create-content-modal";
 import FeedPostCard from "@/components/home/feed-post-card";
@@ -12,19 +11,14 @@ import SupportWidget from "@/components/support/support-widget";
 import UserAvatar from "@/components/user-avatar";
 import {
   MOTION_CALL_STATE_EVENT,
-  MOTION_CALL_SYNC_REQUEST_EVENT,
-  MOTION_START_CALL_EVENT,
   type MotionCallStateDetail,
-  type MotionStartCallDetail,
 } from "@/lib/call-events";
 import {
   INTEREST_OPTIONS,
   type InterestKey,
 } from "@/lib/interests";
 import type {
-  ChatWallpaper,
   ChatWallpaperSelection,
-  ChatWallpaperTarget,
 } from "@/lib/chat-wallpapers";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -51,9 +45,6 @@ type MediaItem = {
 type ViewportMode = "desktop" | "tablet" | "mobile";
 type AuthMode = "signin" | "signup";
 type FeedInterestFilter = "all" | InterestKey;
-type CallTypeFilter = "all" | "voice" | "video";
-type CallDirectionFilter = "all" | "incoming" | "outgoing" | "missed";
-type MessagePanelTab = "chats" | "calls" | "recordings";
 type ThemeSelection =
   | "light"
   | "dark"
@@ -66,7 +57,6 @@ type User = {
   handle: string;
   email: string;
   interests?: InterestKey[];
-  chatWallpaper?: ChatWallpaper;
   avatarGradient: string;
   avatarUrl?: string;
   bio?: string;
@@ -217,101 +207,10 @@ type Conversation = {
   lastCallEvent?: "started" | "accepted" | "declined" | "ended" | "missed";
 };
 
-type ConversationWallpaperState = Pick<
-  Conversation,
-  | "chatWallpaper"
-  | "chatWallpaperUrl"
-  | "chatWallpaperLight"
-  | "chatWallpaperLightUrl"
-  | "chatWallpaperDark"
-  | "chatWallpaperDarkUrl"
-  | "chatWallpaperBlur"
-  | "chatWallpaperDim"
->;
-
 type CallMode = "voice" | "video";
-type CallStatus = "ringing" | "connecting" | "active" | "declined" | "ended" | "missed";
-type CallSignal = {
-  id: string;
-  fromUserId: string;
-  toUserId: string;
-  type: "offer" | "answer" | "ice";
-  payload?: unknown;
-  createdAt: string;
-};
-type CallParticipant = {
-  userId: string;
-  name: string;
-  handle: string;
-  avatarGradient: string;
-  avatarUrl?: string;
-  audioEnabled: boolean;
-  videoEnabled: boolean;
-  screenSharing?: boolean;
-  joined: boolean;
-};
-type CallSession = {
-  id: string;
-  conversationId: string;
-  currentUserId: string;
-  mode: CallMode;
-  status: CallStatus;
-  createdAt: string;
-  updatedAt: string;
-  answeredAt?: string;
-  endedAt?: string;
-  isInitiator: boolean;
-  isIncoming: boolean;
-  isGroup: boolean;
-  title: string;
-  otherUser: {
-    id: string;
-    name: string;
-    handle: string;
-    avatarGradient: string;
-    avatarUrl?: string;
-  };
-  participants: CallParticipant[];
-  signals: CallSignal[];
-};
-
-type ChatAttachment = {
-  url: string;
-  type: "image" | "audio" | "video";
-  durationMs?: number;
-  mimeType?: string;
-  name?: string;
-};
-
-type MessageReaction = {
-  emoji: string;
-  count: number;
-  mine: boolean;
-};
-
-type Message = {
-  id: string;
-  from: "them" | "me" | "system";
-  text: string;
-  createdAt: string;
-  systemType?: "call";
-  callId?: string;
-  callMode?: CallMode;
-  callDirection?: "incoming" | "outgoing";
-  callEvent?: "started" | "accepted" | "declined" | "ended" | "missed";
-  callDurationMs?: number;
-  attachment?: ChatAttachment;
-  reactions: MessageReaction[];
-  deliveryState: "sent" | "delivered" | "read";
-};
-
 type UploadResponse = {
   mediaUrl: string;
   mediaType: MediaType;
-};
-
-type ChatUploadResponse = {
-  attachment: ChatAttachment;
 };
 
 type NotificationEntry = {
@@ -439,15 +338,6 @@ const THEME_OPTIONS: { id: ThemeSelection; label: string }[] = [
   { id: "summer", label: "Summer" },
   { id: "autumn", label: "Autumn" },
 ];
-const CHAT_REACTIONS = [
-  "\u{2764}\u{FE0F}",
-  "\u{1F602}",
-  "\u{1F525}",
-  "\u{1F44F}",
-  "\u{1F62E}",
-  "\u{1F62D}",
-];
-
 function isThemeSelection(input: string | null): input is ThemeSelection {
   return THEME_OPTIONS.some((option) => option.id === input);
 }
@@ -703,30 +593,6 @@ function SaveGlyph({ saved, className }: { saved: boolean; className?: string })
   );
 }
 
-function formatChatTime(isoDate: string): string {
-  const parsed = new Date(isoDate);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(parsed);
-}
-
-function formatVoiceDuration(durationMs?: number): string {
-  if (!durationMs || durationMs <= 0) {
-    return "0:00";
-  }
-
-  const totalSeconds = Math.max(1, Math.round(durationMs / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
-
 function formatTrackDuration(durationSec?: number): string {
   if (!durationSec || durationSec <= 0) {
     return "0:00";
@@ -915,16 +781,10 @@ export default function Home() {
   const [userSearchResults, setUserSearchResults] = useState<UserSearchResult[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
   const [userSearchError, setUserSearchError] = useState<string | null>(null);
-  const [groupCallOpen, setGroupCallOpen] = useState(false);
-  const [groupCallQuery, setGroupCallQuery] = useState("");
-  const [groupCallResults, setGroupCallResults] = useState<UserSearchResult[]>([]);
-  const [groupCallLoading, setGroupCallLoading] = useState(false);
-  const [groupCallError, setGroupCallError] = useState<string | null>(null);
-  const [groupCallSelectionIds, setGroupCallSelectionIds] = useState<string[]>([]);
   const [authHint, setAuthHint] = useState<string | null>(null);
   const [rememberPromptOpen, setRememberPromptOpen] = useState(false);
   const [rememberCandidate, setRememberCandidate] = useState<User | null>(null);
-  const feedView: FeedView = "following";
+  const feedView: FeedView = "discover";
   const [contentView, setContentView] = useState<ContentView>("posts");
   const [activeFeedInterest, setActiveFeedInterest] = useState<FeedInterestFilter>("all");
   const [stories, setStories] = useState<Story[]>([]);
@@ -932,23 +792,6 @@ export default function Home() {
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [liveSessions, setLiveSessions] = useState<LiveSessionSummary[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [currentCall, setCurrentCall] = useState<CallSession | null>(null);
-  const [callBusy, setCallBusy] = useState(false);
-  const [currentCallStatusLabel, setCurrentCallStatusLabel] = useState("");
-  const [text, setText] = useState("");
-  const [chatSearch, setChatSearch] = useState("");
-  const [callTypeFilter, setCallTypeFilter] = useState<CallTypeFilter>("all");
-  const [callDirectionFilter, setCallDirectionFilter] = useState<CallDirectionFilter>("all");
-  const [messagePanelTab, setMessagePanelTab] = useState<MessagePanelTab>("chats");
-  const [markingMissedCallsSeen, setMarkingMissedCallsSeen] = useState(false);
-  const [deletingRecordingId, setDeletingRecordingId] = useState<string | null>(null);
-  const [bulkDeletingRecordings, setBulkDeletingRecordings] = useState(false);
-  const [chatUploading, setChatUploading] = useState(false);
-  const [chatSending, setChatSending] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [reactionMenuId, setReactionMenuId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [publishNotice, setPublishNotice] = useState<string | null>(null);
@@ -983,8 +826,6 @@ export default function Home() {
   const [publishing, setPublishing] = useState(false);
   const [themeSelection, setThemeSelection] = useState<ThemeSelection>("dark");
   const [viewportMode, setViewportMode] = useState<ViewportMode>("desktop");
-  const [savingChatWallpaper, setSavingChatWallpaper] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [bottomNavHidden, setBottomNavHidden] = useState(false);
@@ -1018,17 +859,8 @@ export default function Home() {
   const homeClickRef = useRef<number>(0);
   const bottomNavLastScrollRef = useRef(0);
   const bottomNavTickingRef = useRef(false);
-  const chatThreadRef = useRef<HTMLDivElement | null>(null);
-  const chatPhotoInputRef = useRef<HTMLInputElement | null>(null);
-  const typingStopTimerRef = useRef<number | null>(null);
-  const typingSentRef = useRef(false);
-  const activeIdRef = useRef<string | null>(null);
   const musicPreviewRef = useRef<HTMLAudioElement | null>(null);
   const storyAudioRef = useRef<HTMLAudioElement | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingStreamRef = useRef<MediaStream | null>(null);
-  const recordingStartedAtRef = useRef<number | null>(null);
-  const recordingChunksRef = useRef<Blob[]>([]);
   const notificationsStorageKey = user
     ? `motion-seen-notifications:${user.id}`
     : null;
@@ -1036,35 +868,7 @@ export default function Home() {
   const loadConversations = useCallback(async () => {
     const convoRes = await req<{ conversations: Conversation[] }>("/api/messages/conversations");
     setConversations(convoRes.conversations);
-    setActiveId((current) =>
-      current && convoRes.conversations.some((conversation) => conversation.id === current)
-        ? current
-        : convoRes.conversations[0]?.id ?? null,
-    );
     return convoRes.conversations;
-  }, []);
-
-  const loadConversationMessages = useCallback(async (conversationId: string) => {
-    const payload = await req<{
-      conversation?: Partial<Conversation> & { id: string };
-      messages: Message[];
-    }>(`/api/messages/${conversationId}`);
-    setMessages(payload.messages);
-    if (payload.conversation) {
-      setConversations((current) =>
-        current.map((conversation) =>
-            conversation.id === payload.conversation?.id
-              ? {
-                  ...conversation,
-                  ...payload.conversation,
-                  unread: 0,
-                  missedCallCount: 0,
-                }
-              : conversation,
-        ),
-      );
-    }
-    return payload.messages;
   }, []);
 
   const updateStoryInState = useCallback((nextStory: Story) => {
@@ -1073,93 +877,23 @@ export default function Home() {
     );
   }, []);
 
-  const updateMessageInState = useCallback((nextMessage: Message) => {
-    setMessages((current) =>
-      current.map((message) =>
-        message.id === nextMessage.id ? nextMessage : message,
-      ),
-    );
-  }, []);
-
-  const postTypingState = useCallback(async (conversationId: string, typing: boolean) => {
-    try {
-      await req<{ ok: boolean }>(`/api/messages/${conversationId}/typing`, {
-        method: "POST",
-        body: JSON.stringify({ typing }),
-      });
-    } catch {
-      // Ignore transient typing errors.
-    }
-  }, []);
-
-  const clearTypingState = useCallback((conversationId?: string | null) => {
-    typingSentRef.current = false;
-
-    if (typingStopTimerRef.current !== null) {
-      window.clearTimeout(typingStopTimerRef.current);
-      typingStopTimerRef.current = null;
-    }
-
-    if (!user || !conversationId) {
-      return;
-    }
-
-    void postTypingState(conversationId, false);
-  }, [postTypingState, user]);
-
-  useEffect(() => {
-    activeIdRef.current = activeId;
-  }, [activeId]);
-
-  const startGlobalCall = useCallback(
-    (mode: CallMode) => {
-      if (!activeId || typeof window === "undefined" || callBusy || currentCall) {
-        return;
-      }
-
-      window.dispatchEvent(
-        new CustomEvent<MotionStartCallDetail>(MOTION_START_CALL_EVENT, {
-          detail: { conversationId: activeId, mode },
-        }),
-      );
-    },
-    [activeId, callBusy, currentCall],
-  );
-
   useEffect(() => {
     const handleCallState = (event: Event) => {
       const detail = (event as CustomEvent<MotionCallStateDetail>).detail;
 
-      if (!detail) {
-        return;
-      }
-
-      setCurrentCall((detail.session as CallSession | null) ?? null);
-      setCallBusy(Boolean(detail.busy));
-      setCurrentCallStatusLabel(detail.statusLabel ?? "");
-
-      if (detail.session?.conversationId) {
-        setActiveId(detail.session.conversationId);
-      }
-
-      if (!user || !detail.conversationId) {
+      if (!detail?.conversationId || !user) {
         return;
       }
 
       void loadConversations().catch(() => undefined);
-
-      if (activeIdRef.current === detail.conversationId) {
-        void loadConversationMessages(detail.conversationId).catch(() => undefined);
-      }
     };
 
     window.addEventListener(MOTION_CALL_STATE_EVENT, handleCallState as EventListener);
-    window.dispatchEvent(new Event(MOTION_CALL_SYNC_REQUEST_EVENT));
 
     return () => {
       window.removeEventListener(MOTION_CALL_STATE_EVENT, handleCallState as EventListener);
     };
-  }, [loadConversationMessages, loadConversations, user]);
+  }, [loadConversations, user]);
 
   const loadData = useCallback(async (scope: FeedView) => {
     const interestQuery =
@@ -1178,279 +912,6 @@ export default function Home() {
     setConversations(convoRes);
     setLiveSessions(liveRes.sessions ?? []);
   }, [activeFeedInterest, loadConversations]);
-
-  const updateConversationWallpaperState = useCallback(
-    (
-      conversationId: string,
-      next: Partial<ConversationWallpaperState>,
-    ) => {
-      setConversations((current) =>
-        current.map((conversation) =>
-          conversation.id === conversationId
-            ? {
-                ...conversation,
-                ...next,
-              }
-            : conversation,
-        ),
-      );
-    },
-    [],
-  );
-
-  const saveChatWallpaper = useCallback(
-    async (wallpaper: ChatWallpaper, slot: ChatWallpaperTarget = "all") => {
-      if (!activeId || savingChatWallpaper) {
-        return;
-      }
-
-      const currentConversation =
-        conversations.find((conversation) => conversation.id === activeId) ?? null;
-      const currentSlotWallpaper =
-        slot === "light"
-          ? currentConversation?.chatWallpaperLight
-          : slot === "dark"
-            ? currentConversation?.chatWallpaperDark
-            : currentConversation?.chatWallpaper;
-      const currentSlotWallpaperUrl =
-        slot === "light"
-          ? currentConversation?.chatWallpaperLightUrl
-          : slot === "dark"
-            ? currentConversation?.chatWallpaperDarkUrl
-            : currentConversation?.chatWallpaperUrl;
-
-      if (currentSlotWallpaper === wallpaper && !currentSlotWallpaperUrl) {
-        return;
-      }
-
-      setSavingChatWallpaper(true);
-      updateConversationWallpaperState(
-        activeId,
-        slot === "light"
-          ? {
-              chatWallpaperLight: wallpaper,
-              chatWallpaperLightUrl: undefined,
-            }
-          : slot === "dark"
-            ? {
-                chatWallpaperDark: wallpaper,
-                chatWallpaperDarkUrl: undefined,
-              }
-            : {
-                chatWallpaper: wallpaper,
-                chatWallpaperUrl: undefined,
-              },
-      );
-
-      try {
-        const payload = await req<{
-          conversation: { id: string } & ConversationWallpaperState;
-        }>(`/api/messages/${activeId}/wallpaper`, {
-          method: "PATCH",
-          body: JSON.stringify({ wallpaper, slot }),
-        });
-        updateConversationWallpaperState(payload.conversation.id, payload.conversation);
-      } catch (wallpaperError) {
-        updateConversationWallpaperState(
-          activeId,
-          slot === "light"
-            ? {
-                chatWallpaperLight: currentConversation?.chatWallpaperLight,
-                chatWallpaperLightUrl: currentConversation?.chatWallpaperLightUrl,
-              }
-            : slot === "dark"
-              ? {
-                  chatWallpaperDark: currentConversation?.chatWallpaperDark,
-                  chatWallpaperDarkUrl: currentConversation?.chatWallpaperDarkUrl,
-                }
-              : {
-                  chatWallpaper: currentConversation?.chatWallpaper,
-                  chatWallpaperUrl: currentConversation?.chatWallpaperUrl,
-                },
-        );
-        setError(
-          wallpaperError instanceof Error
-            ? wallpaperError.message
-            : "Failed to update chat wallpaper for this conversation.",
-        );
-      } finally {
-        setSavingChatWallpaper(false);
-      }
-    },
-    [activeId, conversations, savingChatWallpaper, updateConversationWallpaperState],
-  );
-
-  const resetChatWallpaper = useCallback(
-    async (slot: ChatWallpaperTarget = "all") => {
-      if (!activeId || savingChatWallpaper) {
-        return;
-      }
-
-      const currentConversation =
-        conversations.find((conversation) => conversation.id === activeId) ?? null;
-
-      const hasCurrentValue =
-        slot === "light"
-          ? Boolean(
-              currentConversation?.chatWallpaperLight ||
-                currentConversation?.chatWallpaperLightUrl,
-            )
-          : slot === "dark"
-            ? Boolean(
-                currentConversation?.chatWallpaperDark ||
-                  currentConversation?.chatWallpaperDarkUrl,
-              )
-            : Boolean(currentConversation?.chatWallpaper || currentConversation?.chatWallpaperUrl);
-
-      if (!hasCurrentValue) {
-        return;
-      }
-
-      setSavingChatWallpaper(true);
-      updateConversationWallpaperState(
-        activeId,
-        slot === "light"
-          ? {
-              chatWallpaperLight: undefined,
-              chatWallpaperLightUrl: undefined,
-            }
-          : slot === "dark"
-            ? {
-                chatWallpaperDark: undefined,
-                chatWallpaperDarkUrl: undefined,
-              }
-            : {
-                chatWallpaper: undefined,
-                chatWallpaperUrl: undefined,
-              },
-      );
-
-      try {
-        const payload = await req<{
-          conversation: { id: string } & ConversationWallpaperState;
-        }>(`/api/messages/${activeId}/wallpaper`, {
-          method: "PATCH",
-          body: JSON.stringify({ wallpaper: null, slot }),
-        });
-        updateConversationWallpaperState(payload.conversation.id, payload.conversation);
-      } catch (wallpaperError) {
-        updateConversationWallpaperState(
-          activeId,
-          slot === "light"
-            ? {
-                chatWallpaperLight: currentConversation?.chatWallpaperLight,
-                chatWallpaperLightUrl: currentConversation?.chatWallpaperLightUrl,
-              }
-            : slot === "dark"
-              ? {
-                  chatWallpaperDark: currentConversation?.chatWallpaperDark,
-                  chatWallpaperDarkUrl: currentConversation?.chatWallpaperDarkUrl,
-                }
-              : {
-                  chatWallpaper: currentConversation?.chatWallpaper,
-                  chatWallpaperUrl: currentConversation?.chatWallpaperUrl,
-                },
-        );
-        setError(
-          wallpaperError instanceof Error
-            ? wallpaperError.message
-            : "Failed to reset chat wallpaper.",
-        );
-      } finally {
-        setSavingChatWallpaper(false);
-      }
-    },
-    [activeId, conversations, savingChatWallpaper, updateConversationWallpaperState],
-  );
-
-  const uploadChatWallpaper = useCallback(
-    async (file: File | null, slot: ChatWallpaperTarget = "all") => {
-      if (!activeId || !file || savingChatWallpaper) {
-        return;
-      }
-
-      const currentConversation =
-        conversations.find((conversation) => conversation.id === activeId) ?? null;
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("slot", slot);
-
-      setSavingChatWallpaper(true);
-
-      try {
-        const payload = await req<{
-          conversation: { id: string } & ConversationWallpaperState;
-        }>(`/api/messages/${activeId}/wallpaper`, {
-          method: "POST",
-          body: formData,
-        });
-        updateConversationWallpaperState(payload.conversation.id, payload.conversation);
-      } catch (wallpaperError) {
-        updateConversationWallpaperState(
-          activeId,
-          slot === "light"
-            ? {
-                chatWallpaperLight: currentConversation?.chatWallpaperLight,
-                chatWallpaperLightUrl: currentConversation?.chatWallpaperLightUrl,
-              }
-            : slot === "dark"
-              ? {
-                  chatWallpaperDark: currentConversation?.chatWallpaperDark,
-                  chatWallpaperDarkUrl: currentConversation?.chatWallpaperDarkUrl,
-                }
-              : {
-                  chatWallpaper: currentConversation?.chatWallpaper,
-                  chatWallpaperUrl: currentConversation?.chatWallpaperUrl,
-                },
-        );
-        setError(
-          wallpaperError instanceof Error
-            ? wallpaperError.message
-            : "Failed to upload chat wallpaper.",
-        );
-      } finally {
-        setSavingChatWallpaper(false);
-      }
-    },
-    [activeId, conversations, savingChatWallpaper, updateConversationWallpaperState],
-  );
-
-  const saveChatWallpaperEffects = useCallback(
-    async (effects: { blur: number; dim: number }) => {
-      if (!activeId || savingChatWallpaper) {
-        return;
-      }
-
-      const currentConversation =
-        conversations.find((conversation) => conversation.id === activeId) ?? null;
-
-      updateConversationWallpaperState(activeId, {
-        chatWallpaperBlur: effects.blur,
-        chatWallpaperDim: effects.dim,
-      });
-
-      try {
-        const payload = await req<{
-          conversation: { id: string } & ConversationWallpaperState;
-        }>(`/api/messages/${activeId}/wallpaper`, {
-          method: "PATCH",
-          body: JSON.stringify(effects),
-        });
-        updateConversationWallpaperState(payload.conversation.id, payload.conversation);
-      } catch (wallpaperError) {
-        updateConversationWallpaperState(activeId, {
-          chatWallpaperBlur: currentConversation?.chatWallpaperBlur,
-          chatWallpaperDim: currentConversation?.chatWallpaperDim,
-        });
-        setError(
-          wallpaperError instanceof Error
-            ? wallpaperError.message
-            : "Failed to update chat wallpaper styling.",
-        );
-      }
-    },
-    [activeId, conversations, savingChatWallpaper, updateConversationWallpaperState],
-  );
 
   const refreshLiveSessions = useCallback(async () => {
     if (!user) {
@@ -1555,61 +1016,6 @@ export default function Home() {
       window.clearTimeout(handle);
     };
   }, [userSearchQuery]);
-
-  useEffect(() => {
-    if (!groupCallOpen || !user) {
-      setGroupCallResults([]);
-      setGroupCallLoading(false);
-      setGroupCallError(null);
-      return;
-    }
-
-    let active = true;
-    setGroupCallLoading(true);
-    setGroupCallError(null);
-
-    const handle = window.setTimeout(async () => {
-      try {
-        const query = groupCallQuery.trim();
-        const callConversation =
-          conversations.find((conversation) => conversation.id === activeId) ?? null;
-        const payload = await req<{ users: UserSearchResult[] }>(
-          `/api/users${query ? `?q=${encodeURIComponent(query)}` : ""}`,
-        );
-
-        if (!active) {
-          return;
-        }
-
-        const excludedIds = new Set<string>(
-          [user.id, callConversation?.userId]
-            .filter((value): value is string => Boolean(value)),
-        );
-
-        setGroupCallResults(
-          (payload.users ?? []).filter((candidate) => !excludedIds.has(candidate.id)),
-        );
-      } catch (searchError) {
-        if (!active) {
-          return;
-        }
-
-        setGroupCallResults([]);
-        setGroupCallError(
-          searchError instanceof Error ? searchError.message : "Could not load people.",
-        );
-      } finally {
-        if (active) {
-          setGroupCallLoading(false);
-        }
-      }
-    }, 180);
-
-    return () => {
-      active = false;
-      window.clearTimeout(handle);
-    };
-  }, [activeId, conversations, groupCallOpen, groupCallQuery, user]);
 
   useEffect(() => {
     window.localStorage.setItem("motion-theme", themeSelection);
@@ -1854,71 +1260,32 @@ export default function Home() {
   }, [user, notificationsOpen]);
 
   useEffect(() => {
-    if (!user || !activeId) {
-      setMessages([]);
-      return;
-    }
-
-    void loadConversationMessages(activeId).catch((e: unknown) =>
-      setError(e instanceof Error ? e.message : "Failed to load messages"),
-    );
-  }, [user, activeId, loadConversationMessages]);
-
-  useEffect(() => {
-    if (!user || !chatOpen) {
+    if (!user) {
       return;
     }
 
     let active = true;
 
-    const refreshChat = async () => {
+    const refreshConversations = async () => {
       try {
-        await loadConversations();
-        if (!active || !activeId) {
+        const nextConversations = await loadConversations();
+        if (!active) {
           return;
         }
-        await loadConversationMessages(activeId);
+        setConversations(nextConversations);
       } catch {
-        // Ignore chat refresh failures.
+        // Ignore inbox badge refresh failures.
       }
     };
 
-    void refreshChat();
-    const interval = window.setInterval(refreshChat, 4_000);
+    void refreshConversations();
+    const interval = window.setInterval(refreshConversations, 4_000);
 
     return () => {
       active = false;
       window.clearInterval(interval);
     };
-  }, [user, chatOpen, activeId, loadConversationMessages, loadConversations]);
-
-  useEffect(() => {
-    if (!user || !activeId || !chatOpen) {
-      clearTypingState();
-      return;
-    }
-
-    return () => {
-      clearTypingState(activeId);
-    };
-  }, [user, activeId, chatOpen, clearTypingState]);
-
-  useEffect(() => {
-    if (chatOpen) {
-      return;
-    }
-
-    setReactionMenuId(null);
-    if (recording) {
-      cancelVoiceRecording();
-    }
-  }, [chatOpen, recording]);
-
-  useEffect(() => {
-    return () => {
-      cancelVoiceRecording();
-    };
-  }, []);
+  }, [loadConversations, user]);
 
   useEffect(() => {
     if (!composerOpen) {
@@ -1990,24 +1357,10 @@ export default function Home() {
       if (heartBurstTimerRef.current !== null) {
         window.clearTimeout(heartBurstTimerRef.current);
       }
-      if (typingStopTimerRef.current !== null) {
-        window.clearTimeout(typingStopTimerRef.current);
-      }
       stopMusicPreview();
       stopStoryAudio();
     };
   }, []);
-
-  useEffect(() => {
-    if (!chatThreadRef.current) {
-      return;
-    }
-
-    chatThreadRef.current.scrollTo({
-      top: chatThreadRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [messages, activeId, conversations]);
 
   const sortedPosts = useMemo(() => sortByNewest(posts), [posts]);
   const photoPosts = useMemo(
@@ -2219,106 +1572,6 @@ export default function Home() {
     () => followNotifications.filter((notification) => notification.type === "collab_invite").length,
     [followNotifications],
   );
-  const activeConversation = useMemo(
-    () =>
-      conversations.find((conversation) => conversation.id === activeId) ?? null,
-    [conversations, activeId],
-  );
-  const groupCallSelectionSet = useMemo(
-    () => new Set(groupCallSelectionIds),
-    [groupCallSelectionIds],
-  );
-  const activeConversationCall = useMemo(
-    () =>
-      currentCall && activeId && currentCall.conversationId === activeId
-        ? currentCall
-        : null,
-    [currentCall, activeId],
-  );
-  const callStatusLabel = useMemo(() => {
-    if (!activeConversationCall) {
-      return null;
-    }
-
-    if (activeConversationCall.status === "ringing") {
-      return activeConversationCall.isIncoming ? "Incoming" : "Calling";
-    }
-
-    if (activeConversationCall.status === "connecting") {
-      return "Connecting";
-    }
-
-    if (activeConversationCall.status === "active") {
-      return currentCallStatusLabel.toLowerCase().includes("connected") ? "Live" : "Active";
-    }
-
-    return activeConversationCall.status;
-  }, [activeConversationCall, currentCallStatusLabel]);
-  const filteredConversations = useMemo(() => {
-    const query = chatSearch.trim().toLowerCase();
-    return conversations.filter((conversation) => {
-      const matchesSearch =
-        !query ||
-        conversation.name.toLowerCase().includes(query) ||
-        conversation.lastMessage.toLowerCase().includes(query);
-
-      if (!matchesSearch) {
-        return false;
-      }
-
-      if (messagePanelTab === "calls") {
-        const hasAnyCallHistory =
-          conversation.hasVoiceCallHistory || conversation.hasVideoCallHistory;
-
-        if (!hasAnyCallHistory) {
-          return false;
-        }
-      }
-
-      if (messagePanelTab === "recordings" && !conversation.hasRecordingHistory) {
-        return false;
-      }
-
-      if (messagePanelTab !== "calls") {
-        return true;
-      }
-
-      if (callDirectionFilter === "incoming" && !conversation.hasIncomingCallHistory) {
-        return false;
-      }
-
-      if (callDirectionFilter === "outgoing" && !conversation.hasOutgoingCallHistory) {
-        return false;
-      }
-
-      if (callDirectionFilter === "missed" && conversation.missedCallCount <= 0) {
-        return false;
-      }
-
-      if (callTypeFilter === "voice" && !conversation.hasVoiceCallHistory) {
-        return false;
-      }
-
-      if (callTypeFilter === "video" && !conversation.hasVideoCallHistory) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [callDirectionFilter, callTypeFilter, chatSearch, conversations, messagePanelTab]);
-
-  useEffect(() => {
-    if (messagePanelTab === "chats" || filteredConversations.length === 0) {
-      return;
-    }
-
-    if (activeId && filteredConversations.some((conversation) => conversation.id === activeId)) {
-      return;
-    }
-
-    setActiveId(filteredConversations[0]?.id ?? null);
-  }, [activeId, filteredConversations, messagePanelTab]);
-
   const activeCommentsPost = useMemo(
     () => posts.find((post) => post.id === commentsPostId) ?? null,
     [commentsPostId, posts],
@@ -2463,7 +1716,6 @@ export default function Home() {
   const openComposer = (mode: ComposerMode = "post") => {
     setError(null);
     setPublishNotice(null);
-    setChatOpen(false);
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setCommentsPostId(null);
@@ -2499,7 +1751,6 @@ export default function Home() {
   const openStoryComposer = () => {
     setError(null);
     setPublishNotice(null);
-    setChatOpen(false);
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setCommentsPostId(null);
@@ -2523,7 +1774,7 @@ export default function Home() {
 
   const openChat = () => {
     const params = new URLSearchParams();
-    const targetConversationId = activeId ?? conversations[0]?.id ?? null;
+    const targetConversationId = conversations[0]?.id ?? null;
 
     setError(null);
     setComposerOpen(false);
@@ -2548,7 +1799,6 @@ export default function Home() {
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setCommentsPostId(null);
-    setChatOpen(false);
     setSharePostId(null);
     setActiveStoryId(null);
     setContentView(view);
@@ -2565,7 +1815,6 @@ export default function Home() {
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setCommentsPostId(null);
-    setChatOpen(false);
     setSharePostId(null);
     setActiveStoryId(null);
     setContentView("posts");
@@ -2587,7 +1836,6 @@ export default function Home() {
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setCommentsPostId(null);
-    setChatOpen(false);
     setSharePostId(null);
     setActiveStoryId(null);
     router.push(`/live/${sessionId}`);
@@ -2598,73 +1846,6 @@ export default function Home() {
     setUserSearchResults([]);
     setUserSearchError(null);
   };
-
-  const clearGroupCallPicker = useCallback(() => {
-    setGroupCallOpen(false);
-    setGroupCallQuery("");
-    setGroupCallResults([]);
-    setGroupCallLoading(false);
-    setGroupCallError(null);
-    setGroupCallSelectionIds([]);
-  }, []);
-
-  const openGroupCallPicker = useCallback(() => {
-    if (!activeId || !activeConversation || activeConversation.isGroup || callBusy || currentCall) {
-      return;
-    }
-
-    setGroupCallSelectionIds([]);
-    setGroupCallQuery("");
-    setGroupCallError(null);
-    setGroupCallOpen(true);
-  }, [activeConversation, activeId, callBusy, currentCall]);
-
-  const toggleGroupCallSelection = useCallback((userId: string) => {
-    setGroupCallSelectionIds((current) =>
-      current.includes(userId)
-        ? current.filter((candidateId) => candidateId !== userId)
-        : [...current, userId],
-    );
-  }, []);
-
-  const startGroupVideoCall = useCallback(() => {
-    if (!activeId || typeof window === "undefined" || callBusy || currentCall) {
-      return;
-    }
-
-    if (groupCallSelectionIds.length === 0) {
-      setGroupCallError("Pick at least one more person for the group call.");
-      return;
-    }
-
-    window.dispatchEvent(
-      new CustomEvent<MotionStartCallDetail>(MOTION_START_CALL_EVENT, {
-        detail: {
-          conversationId: activeId,
-          mode: "video",
-          participantIds: groupCallSelectionIds,
-        },
-      }),
-    );
-
-    clearGroupCallPicker();
-  }, [activeId, callBusy, clearGroupCallPicker, currentCall, groupCallSelectionIds]);
-
-  useEffect(() => {
-    if (!groupCallOpen) {
-      return;
-    }
-
-    if (!activeConversation || activeConversation.isGroup || currentCall) {
-      clearGroupCallPicker();
-    }
-  }, [activeConversation, clearGroupCallPicker, currentCall, groupCallOpen]);
-
-  useEffect(() => {
-    if (!chatOpen && groupCallOpen) {
-      clearGroupCallPicker();
-    }
-  }, [chatOpen, clearGroupCallPicker, groupCallOpen]);
 
   const persistAccounts = (accounts: StoredAccount[]) => {
     setSavedAccounts(accounts);
@@ -2714,7 +1895,6 @@ export default function Home() {
     setError(null);
     setComposerOpen(false);
     setStoryComposerOpen(false);
-    setChatOpen(false);
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setCommentsPostId(null);
@@ -2846,7 +2026,6 @@ export default function Home() {
       await req<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
       setComposerOpen(false);
       setStoryComposerOpen(false);
-      setChatOpen(false);
       setNotificationsOpen(false);
       setProfileMenuOpen(false);
       setCommentsPostId(null);
@@ -2857,7 +2036,6 @@ export default function Home() {
       setSavedPosts([]);
       setLiveSessions([]);
       setConversations([]);
-      setMessages([]);
       setComposerMode("post");
       setComposerCaption("");
       setComposerVisibleAt("");
@@ -3272,7 +2450,6 @@ export default function Home() {
     setError(null);
     setComposerOpen(false);
     setStoryComposerOpen(false);
-    setChatOpen(false);
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setCommentsPostId(null);
@@ -3292,376 +2469,9 @@ export default function Home() {
     router.push(`/messages?${params.toString()}`);
   }, [router]);
 
-  const markAllMissedCallsSeen = useCallback(async () => {
-    if (!user || markingMissedCallsSeen || missedCallsTotal <= 0) {
-      return;
-    }
-
-    setMarkingMissedCallsSeen(true);
-
-    try {
-      await req<{ markedCount: number; conversationIds: string[] }>(
-        "/api/messages/calls/seen",
-        {
-          method: "POST",
-        },
-      );
-      await loadConversations();
-      if (activeId) {
-        await loadConversationMessages(activeId);
-      }
-    } catch (markError) {
-      setError(
-        markError instanceof Error
-          ? markError.message
-          : "Could not mark missed calls as seen.",
-      );
-    } finally {
-      setMarkingMissedCallsSeen(false);
-    }
-  }, [activeId, loadConversationMessages, loadConversations, markingMissedCallsSeen, missedCallsTotal, user]);
-
   const closeStory = () => {
     stopStoryAudio();
     setActiveStoryId(null);
-  };
-
-  const handleMessageInputChange = (value: string) => {
-    setText(value);
-
-    if (!user || !activeId) {
-      return;
-    }
-
-    if (!value.trim()) {
-      clearTypingState(activeId);
-      return;
-    }
-
-    if (!typingSentRef.current) {
-      typingSentRef.current = true;
-      void postTypingState(activeId, true);
-    }
-
-    if (typingStopTimerRef.current !== null) {
-      window.clearTimeout(typingStopTimerRef.current);
-    }
-
-    typingStopTimerRef.current = window.setTimeout(() => {
-      typingSentRef.current = false;
-      void postTypingState(activeId, false);
-      typingStopTimerRef.current = null;
-    }, 1600);
-  };
-
-  const uploadChatAttachment = async (file: File, durationMs?: number) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    if (typeof durationMs === "number" && Number.isFinite(durationMs)) {
-      formData.append("durationMs", String(durationMs));
-    }
-
-    return req<ChatUploadResponse>("/api/messages/upload", {
-      method: "POST",
-      body: formData,
-    });
-  };
-
-  const sendMessagePayload = async ({
-    text: nextText,
-    attachment,
-  }: {
-    text?: string;
-    attachment?: ChatAttachment;
-  }) => {
-    if (!activeId) {
-      return;
-    }
-
-    clearTypingState(activeId);
-    setChatSending(true);
-    setError(null);
-
-    try {
-      const message = await req<Message>(`/api/messages/${activeId}`, {
-        method: "POST",
-        body: JSON.stringify({
-          text: nextText ?? "",
-          attachment,
-        }),
-      });
-      setMessages((current) => [...current, message]);
-      setText("");
-      setReactionMenuId(null);
-      await loadConversations();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Message failed");
-    } finally {
-      setChatSending(false);
-    }
-  };
-
-  const send = async (event: FormEvent) => {
-    event.preventDefault();
-
-    if (!activeId || !text.trim()) {
-      return;
-    }
-
-    await sendMessagePayload({ text: text.trim() });
-  };
-
-  const sendChatPhoto = async (file: File) => {
-    if (!activeId) {
-      return;
-    }
-
-    setChatUploading(true);
-    setError(null);
-
-    try {
-      const uploaded = await uploadChatAttachment(file);
-      await sendMessagePayload({
-        text: text.trim(),
-        attachment: uploaded.attachment,
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Photo send failed");
-    } finally {
-      setChatUploading(false);
-      if (chatPhotoInputRef.current) {
-        chatPhotoInputRef.current.value = "";
-      }
-    }
-  };
-
-  const handleChatPhotoSelection = async (fileList: FileList | null) => {
-    const file = fileList?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    await sendChatPhoto(file);
-  };
-
-  const sendVoiceMessage = async (file: File, durationMs?: number) => {
-    if (!activeId) {
-      return;
-    }
-
-    setChatUploading(true);
-    setError(null);
-
-    try {
-      const uploaded = await uploadChatAttachment(file, durationMs);
-      await sendMessagePayload({
-        attachment: uploaded.attachment,
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Voice message failed");
-    } finally {
-      setChatUploading(false);
-    }
-  };
-
-  const deleteRecordingMessage = async (messageId: string) => {
-    if (!activeId || deletingRecordingId) {
-      return;
-    }
-
-    const confirmed =
-      typeof window === "undefined"
-        ? true
-        : window.confirm("Delete this saved call recording from the thread?");
-
-    if (!confirmed) {
-      return;
-    }
-
-    setDeletingRecordingId(messageId);
-    setError(null);
-
-    try {
-      await req<{ ok: boolean }>(`/api/messages/${activeId}/recordings/${messageId}`, {
-        method: "DELETE",
-      });
-      setMessages((current) => current.filter((message) => message.id !== messageId));
-      await loadConversations();
-    } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Could not delete the recording.",
-      );
-    } finally {
-      setDeletingRecordingId(null);
-    }
-  };
-
-  const deleteAllRecordingsInThread = async () => {
-    if (!activeId || bulkDeletingRecordings) {
-      return;
-    }
-
-    const recordingTotal = activeConversation?.recordingCount ?? 0;
-    if (recordingTotal <= 0) {
-      return;
-    }
-
-    const confirmed =
-      typeof window === "undefined"
-        ? true
-        : window.confirm(
-            `Delete all ${recordingTotal} saved recording${
-              recordingTotal === 1 ? "" : "s"
-            } from this thread?`,
-          );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setBulkDeletingRecordings(true);
-    setError(null);
-
-    try {
-      await req<{ ok: boolean; deletedCount: number }>(`/api/messages/${activeId}/recordings`, {
-        method: "DELETE",
-      });
-      setMessages((current) =>
-        current.filter(
-          (message) =>
-            !message.attachment?.name?.startsWith("motion-call-recording-"),
-        ),
-      );
-      await loadConversations();
-    } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Could not delete the recordings.",
-      );
-    } finally {
-      setBulkDeletingRecordings(false);
-    }
-  };
-
-  const cancelVoiceRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.ondataavailable = null;
-      mediaRecorderRef.current.onstop = null;
-      if (mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-    }
-
-    recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
-    recordingStreamRef.current = null;
-    mediaRecorderRef.current = null;
-    recordingChunksRef.current = [];
-    recordingStartedAtRef.current = null;
-    setRecording(false);
-  };
-
-  const stopVoiceRecording = () => {
-    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") {
-      return;
-    }
-
-    setRecording(false);
-    mediaRecorderRef.current.stop();
-  };
-
-  const startVoiceRecording = async () => {
-    if (!activeId) {
-      return;
-    }
-
-    if (
-      typeof window === "undefined" ||
-      typeof MediaRecorder === "undefined" ||
-      !navigator.mediaDevices?.getUserMedia
-    ) {
-      setError("Voice messages are not supported in this browser.");
-      return;
-    }
-
-    setError(null);
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-
-      recordingStreamRef.current = stream;
-      mediaRecorderRef.current = recorder;
-      recordingChunksRef.current = [];
-      recordingStartedAtRef.current = Date.now();
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordingChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        const durationMs = recordingStartedAtRef.current
-          ? Date.now() - recordingStartedAtRef.current
-          : undefined;
-        const blob = new Blob(recordingChunksRef.current, {
-          type: recorder.mimeType || "audio/webm",
-        });
-
-        recordingChunksRef.current = [];
-        recordingStartedAtRef.current = null;
-        recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
-        recordingStreamRef.current = null;
-        mediaRecorderRef.current = null;
-
-        if (blob.size <= 0) {
-          return;
-        }
-
-        const extension = blob.type.includes("ogg")
-          ? "ogg"
-          : blob.type.includes("mpeg") || blob.type.includes("mp3")
-            ? "mp3"
-            : blob.type.includes("mp4")
-              ? "m4a"
-              : "webm";
-        const file = new File([blob], `voice-${Date.now()}.${extension}`, {
-          type: blob.type || "audio/webm",
-        });
-
-        void sendVoiceMessage(file, durationMs);
-      };
-
-      recorder.start();
-      setRecording(true);
-    } catch (e) {
-      recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
-      recordingStreamRef.current = null;
-      mediaRecorderRef.current = null;
-      setRecording(false);
-      setError(e instanceof Error ? e.message : "Could not start voice recording.");
-    }
-  };
-
-  const toggleReaction = async (messageId: string, emoji: string) => {
-    if (!activeId) {
-      return;
-    }
-
-    try {
-      const payload = await req<{ message: Message }>(`/api/messages/${activeId}/reactions`, {
-        method: "POST",
-        body: JSON.stringify({ messageId, emoji }),
-      });
-      updateMessageInState(payload.message);
-      setReactionMenuId(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Reaction failed.");
-    }
   };
 
   const uploadSelectedMedia = async (
@@ -4926,7 +3736,7 @@ export default function Home() {
                     type="button"
                     onClick={handleHomePress}
                     className="nav-item mb-2 w-full text-left text-sm"
-                    aria-pressed={contentView === "posts" && !chatOpen}
+                    aria-pressed={contentView === "posts"}
                   >
                     {item}
                   </button>
@@ -4936,7 +3746,6 @@ export default function Home() {
                     type="button"
                     onClick={openChat}
                     className="nav-item mb-2 w-full text-left text-sm"
-                    aria-expanded={chatOpen}
                   >
                     {item}
                     {missedCallsTotal > 0
@@ -5168,7 +3977,7 @@ export default function Home() {
           type="button"
           onClick={handleHomePress}
           className="bottom-nav-item"
-          aria-pressed={contentView === "posts" && !chatOpen}
+          aria-pressed={contentView === "posts"}
           aria-label="Home"
         >
           <svg
@@ -5215,7 +4024,6 @@ export default function Home() {
           type="button"
           onClick={openChat}
           className="bottom-nav-item relative"
-          aria-expanded={chatOpen}
           aria-label="Messages"
         >
           <svg
@@ -5283,273 +4091,6 @@ export default function Home() {
         </button>
       </nav>
 
-      <ChatPanel
-        open={chatOpen}
-        chatSearch={chatSearch}
-        messageTab={messagePanelTab}
-        callTypeFilter={callTypeFilter}
-        callDirectionFilter={callDirectionFilter}
-        missedCallsTotal={missedCallsTotal}
-        markingMissedSeen={markingMissedCallsSeen}
-        filteredConversations={filteredConversations}
-        activeId={activeId}
-        activeConversation={activeConversation ?? null}
-        friendActivity={friendActivity}
-        messages={messages}
-        reactionMenuId={reactionMenuId}
-        chatReactions={CHAT_REACTIONS}
-        recording={recording}
-        chatUploading={chatUploading}
-        chatSending={chatSending}
-        text={text}
-        callStatusLabel={callStatusLabel}
-        callBusy={callBusy}
-        chatWallpaper={activeConversation?.chatWallpaper}
-        chatWallpaperUrl={activeConversation?.chatWallpaperUrl}
-        chatWallpaperLight={activeConversation?.chatWallpaperLight}
-        chatWallpaperLightUrl={activeConversation?.chatWallpaperLightUrl}
-        chatWallpaperDark={activeConversation?.chatWallpaperDark}
-        chatWallpaperDarkUrl={activeConversation?.chatWallpaperDarkUrl}
-        chatWallpaperBlur={activeConversation?.chatWallpaperBlur}
-        chatWallpaperDim={activeConversation?.chatWallpaperDim}
-        defaultChatWallpaper={user.chatWallpaper}
-        savingChatWallpaper={savingChatWallpaper}
-        chatThreadRef={chatThreadRef}
-        chatPhotoInputRef={chatPhotoInputRef}
-        onClose={() => setChatOpen(false)}
-        onChatSearchChange={setChatSearch}
-        onMessageTabChange={setMessagePanelTab}
-        onCallTypeFilterChange={setCallTypeFilter}
-        onCallDirectionFilterChange={setCallDirectionFilter}
-        onMarkAllMissedSeen={() => {
-          void markAllMissedCallsSeen();
-        }}
-        onOpenCallsPage={() => {
-          const params = new URLSearchParams();
-
-          if (activeId) {
-            params.set("conversation", activeId);
-          }
-
-          if (callDirectionFilter !== "all") {
-            params.set("direction", callDirectionFilter);
-          }
-
-          if (callTypeFilter !== "all") {
-            params.set("type", callTypeFilter);
-          }
-
-          setChatOpen(false);
-          router.push(`/calls${params.size > 0 ? `?${params.toString()}` : ""}`);
-        }}
-        onClearChatSearch={() => setChatSearch("")}
-        onSelectConversation={setActiveId}
-        onBack={() => setActiveId(null)}
-        onToggleReactionMenu={(messageId) =>
-          setReactionMenuId((current) => (current === messageId ? null : messageId))
-        }
-        onToggleReaction={(messageId, emoji) => {
-          void toggleReaction(messageId, emoji);
-        }}
-        onMessageInputChange={handleMessageInputChange}
-        onChatPhotoSelection={(files) => {
-          void handleChatPhotoSelection(files);
-        }}
-        onToggleRecording={() => {
-          if (recording) {
-            stopVoiceRecording();
-            return;
-          }
-          void startVoiceRecording();
-        }}
-        onStartVoiceCall={() => {
-          startGlobalCall("voice");
-        }}
-        onStartVideoCall={() => {
-          startGlobalCall("video");
-        }}
-        onOpenGroupVideoCall={
-          activeConversation && !activeConversation.isGroup
-            ? () => {
-                openGroupCallPicker();
-              }
-            : undefined
-        }
-        onChatWallpaperChange={(wallpaper, target) => {
-          void saveChatWallpaper(wallpaper, target);
-        }}
-        onUploadChatWallpaper={(file, target) => {
-          void uploadChatWallpaper(file, target);
-        }}
-        onResetChatWallpaper={(target) => {
-          void resetChatWallpaper(target);
-        }}
-        onChatWallpaperEffectsChange={(effects) => {
-          void saveChatWallpaperEffects(effects);
-        }}
-        onDeleteRecording={(messageId) => {
-          void deleteRecordingMessage(messageId);
-        }}
-        deletingRecordingId={deletingRecordingId}
-        onDeleteAllRecordings={() => {
-          void deleteAllRecordingsInThread();
-        }}
-        deletingAllRecordings={bulkDeletingRecordings}
-        onSubmit={send}
-        formatChatTime={formatChatTime}
-        formatVoiceDuration={formatVoiceDuration}
-      />
-      {groupCallOpen ? (
-        <div className="fixed inset-0 z-[125] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
-          <div className="motion-surface w-[min(34rem,calc(100vw-1.5rem))] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Group Video Call
-                </p>
-                <h3
-                  className="mt-2 text-xl font-semibold text-slate-900"
-                  style={{ fontFamily: "var(--font-heading)" }}
-                >
-                  Add people to {activeConversation?.name ?? "this call"}
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  The current chat is already included. Pick extra people and we will
-                  start one shared video call.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={clearGroupCallPicker}
-                className="grid h-10 w-10 place-items-center rounded-full border border-[var(--line)] bg-white text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                aria-label="Close group call picker"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                >
-                  <path d="M5 5l10 10M15 5L5 15" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--brand-soft)]/35 px-4 py-3">
-              <div className="flex flex-wrap gap-2">
-                {activeConversation ? (
-                  <span className="rounded-full border border-[var(--brand)]/20 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600">
-                    {activeConversation.name} is already in the call
-                  </span>
-                ) : null}
-                <span className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-semibold text-slate-500">
-                  {groupCallSelectionIds.length === 0
-                    ? "No extra people selected yet"
-                    : `${groupCallSelectionIds.length} extra ${
-                        groupCallSelectionIds.length === 1 ? "person" : "people"
-                      } selected`}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <input
-                value={groupCallQuery}
-                onChange={(event) => setGroupCallQuery(event.target.value)}
-                className="h-11 w-full rounded-full border border-[var(--line)] bg-white px-4 text-sm text-slate-700 transition focus:border-[var(--brand)] focus:outline-none"
-                placeholder="Search people to add..."
-                aria-label="Search people for group call"
-              />
-            </div>
-
-            {groupCallError ? (
-              <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-600">
-                {groupCallError}
-              </p>
-            ) : null}
-
-            <div className="mt-4 max-h-[22rem] space-y-2 overflow-y-auto pr-1">
-              {groupCallLoading ? (
-                <div className="rounded-2xl border border-[var(--line)] bg-white px-4 py-4 text-sm text-slate-500">
-                  Loading people...
-                </div>
-              ) : null}
-
-              {!groupCallLoading &&
-                groupCallResults.map((candidate) => {
-                  const selected = groupCallSelectionSet.has(candidate.id);
-
-                  return (
-                    <button
-                      key={candidate.id}
-                      type="button"
-                      onClick={() => toggleGroupCallSelection(candidate.id)}
-                      className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
-                        selected
-                          ? "border-[var(--brand)] bg-[var(--brand-soft)]/45"
-                          : "border-[var(--line)] bg-white hover:border-[var(--brand)]/40"
-                      }`}
-                    >
-                      <UserAvatar
-                        name={candidate.name}
-                        avatarGradient={candidate.avatarGradient}
-                        avatarUrl={candidate.avatarUrl}
-                        className="h-11 w-11"
-                        textClassName="text-sm font-semibold text-white"
-                        sizes="44px"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">
-                          {candidate.name}
-                        </p>
-                        <p className="truncate text-xs text-slate-500">
-                          @{candidate.handle}
-                        </p>
-                      </div>
-                      <span
-                        className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-                          selected
-                            ? "bg-[var(--brand)] text-white"
-                            : "border border-[var(--line)] bg-white text-slate-500"
-                        }`}
-                      >
-                        {selected ? "Selected" : "Add"}
-                      </span>
-                    </button>
-                  );
-                })}
-
-              {!groupCallLoading && groupCallResults.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[var(--line)] bg-white px-4 py-5 text-sm text-slate-500">
-                  {groupCallQuery.trim()
-                    ? "No people match that search."
-                    : "Search or scroll to pick people for the group call."}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={clearGroupCallPicker}
-                className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={startGroupVideoCall}
-                disabled={groupCallSelectionIds.length === 0 || callBusy || Boolean(currentCall)}
-                className="rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Start group call
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
       <button
         type="button"
         className="chat-fab"
