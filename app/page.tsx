@@ -55,15 +55,10 @@ type CallTypeFilter = "all" | "voice" | "video";
 type CallDirectionFilter = "all" | "incoming" | "outgoing" | "missed";
 type MessagePanelTab = "chats" | "calls" | "recordings";
 type ThemeSelection =
-  | "system"
   | "light"
   | "dark"
   | "summer"
-  | "autumn"
-  | "winter"
-  | "spring"
-  | "ocean"
-  | "sunset";
+  | "autumn";
 
 type User = {
   id: string;
@@ -441,13 +436,8 @@ const STORY_EMOJI_OPTIONS = [
 const THEME_OPTIONS: { id: ThemeSelection; label: string }[] = [
   { id: "dark", label: "Dark" },
   { id: "light", label: "Light" },
-  { id: "system", label: "System" },
   { id: "summer", label: "Summer" },
   { id: "autumn", label: "Autumn" },
-  { id: "winter", label: "Winter" },
-  { id: "spring", label: "Spring" },
-  { id: "ocean", label: "Ocean" },
-  { id: "sunset", label: "Sunset" },
 ];
 const CHAT_REACTIONS = [
   "\u{2764}\u{FE0F}",
@@ -773,50 +763,10 @@ function ThemeGlyph({ theme }: { theme: ThemeSelection }) {
     );
   }
 
-  if (theme === "system") {
-    return (
-      <>
-        <rect x="2.5" y="3.3" width="15" height="10.7" rx="1.8" />
-        <path d="M7.4 17.2h5.2M9 14.9h2" />
-      </>
-    );
-  }
-
   if (theme === "autumn") {
     return <path d="M10 2.4c2.7 2.6 3.6 6.1 2.5 9-1 2.7-3.7 4.7-6.8 5.1 0-1.8.6-3.5 1.8-4.8 1-1.1 2.4-1.9 4-2.2-2.3-.2-4.4.3-6.1 1.7-.5-3.4 1.2-6.7 4.6-8.8Z" />;
   }
-
-  if (theme === "winter") {
-    return (
-      <>
-        <path d="M10 2.2v15.6M3.2 6.1l13.6 7.8M16.8 6.1 3.2 13.9M6.3 3.6 10 7.3l3.7-3.7M6.3 16.4 10 12.7l3.7 3.7" />
-      </>
-    );
-  }
-
-  if (theme === "spring") {
-    return (
-      <>
-        <circle cx="10" cy="10" r="1.5" />
-        <circle cx="10" cy="5.7" r="2.1" />
-        <circle cx="14.3" cy="10" r="2.1" />
-        <circle cx="10" cy="14.3" r="2.1" />
-        <circle cx="5.7" cy="10" r="2.1" />
-      </>
-    );
-  }
-
-  if (theme === "ocean") {
-    return <path d="M2.3 11.2c1.8-2 3.3-2 5.1 0s3.3 2 5.1 0 3.3-2 5.1 0M2.3 7.4c1.8-2 3.3-2 5.1 0s3.3 2 5.1 0 3.3-2 5.1 0M2.3 15c1.8-2 3.3-2 5.1 0s3.3 2 5.1 0 3.3-2 5.1 0" />;
-  }
-
-  return (
-    <>
-      <path d="M2.4 13.8h15.2" />
-      <path d="M5 13.8a5 5 0 1 1 10 0" />
-      <path d="M10 2.6v2.2M4 9.5l1.5 1M16 9.5l-1.5 1" />
-    </>
-  );
+  return <path d="M10 2.4c2.7 2.6 3.6 6.1 2.5 9-1 2.7-3.7 4.7-6.8 5.1 0-1.8.6-3.5 1.8-4.8 1-1.1 2.4-1.9 4-2.2-2.3-.2-4.4.3-6.1 1.7-.5-3.4 1.2-6.7 4.6-8.8Z" />;
 }
 
 function ThemePicker({
@@ -1031,8 +981,7 @@ export default function Home() {
   const [storyFiles, setStoryFiles] = useState<File[]>([]);
   const [storyKind, setStoryKind] = useState<PostKind>("Photo");
   const [publishing, setPublishing] = useState(false);
-  const [themeSelection, setThemeSelection] = useState<ThemeSelection>("system");
-  const [systemPrefersDark, setSystemPrefersDark] = useState(false);
+  const [themeSelection, setThemeSelection] = useState<ThemeSelection>("dark");
   const [viewportMode, setViewportMode] = useState<ViewportMode>("desktop");
   const [savingChatWallpaper, setSavingChatWallpaper] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -1191,7 +1140,6 @@ export default function Home() {
 
       if (detail.session?.conversationId) {
         setActiveId(detail.session.conversationId);
-        setChatOpen(true);
       }
 
       if (!user || !detail.conversationId) {
@@ -1528,16 +1476,6 @@ export default function Home() {
     if (storedViewport === "desktop" || storedViewport === "tablet" || storedViewport === "mobile") {
       setViewportMode(storedViewport);
     }
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const syncSystemTheme = (event?: MediaQueryListEvent) => {
-      setSystemPrefersDark(event ? event.matches : mediaQuery.matches);
-    };
-
-    syncSystemTheme();
-    mediaQuery.addEventListener("change", syncSystemTheme);
-
-    return () => mediaQuery.removeEventListener("change", syncSystemTheme);
   }, []);
 
   useEffect(() => {
@@ -1674,16 +1612,9 @@ export default function Home() {
   }, [activeId, conversations, groupCallOpen, groupCallQuery, user]);
 
   useEffect(() => {
-    const resolvedTheme =
-      themeSelection === "system"
-        ? systemPrefersDark
-          ? "dark"
-          : "light"
-        : themeSelection;
-
     window.localStorage.setItem("motion-theme", themeSelection);
-    document.documentElement.setAttribute("data-theme", resolvedTheme);
-  }, [themeSelection, systemPrefersDark]);
+    document.documentElement.setAttribute("data-theme", themeSelection);
+  }, [themeSelection]);
 
   useEffect(() => {
     if (!notificationsStorageKey) {
@@ -2591,6 +2522,9 @@ export default function Home() {
   };
 
   const openChat = () => {
+    const params = new URLSearchParams();
+    const targetConversationId = activeId ?? conversations[0]?.id ?? null;
+
     setError(null);
     setComposerOpen(false);
     setStoryComposerOpen(false);
@@ -2599,8 +2533,12 @@ export default function Home() {
     setCommentsPostId(null);
     setSharePostId(null);
     setActiveStoryId(null);
-    setActiveId((current) => current ?? conversations[0]?.id ?? null);
-    setChatOpen(true);
+
+    if (targetConversationId) {
+      params.set("conversation", targetConversationId);
+    }
+
+    router.push(`/messages${params.size > 0 ? `?${params.toString()}` : ""}`);
   };
 
   const openContentView = (view: ContentView) => {
@@ -3343,16 +3281,16 @@ export default function Home() {
   };
 
   const openConversationFromNotification = useCallback((conversationId: string) => {
+    const params = new URLSearchParams();
     setNotificationsOpen(false);
     setProfileMenuOpen(false);
     setComposerOpen(false);
     setStoryComposerOpen(false);
-    setMessagePanelTab("calls");
-    setCallTypeFilter("all");
-    setCallDirectionFilter("missed");
-    setActiveId(conversationId);
-    setChatOpen(true);
-  }, []);
+    params.set("conversation", conversationId);
+    params.set("tab", "calls");
+    params.set("direction", "missed");
+    router.push(`/messages?${params.toString()}`);
+  }, [router]);
 
   const markAllMissedCallsSeen = useCallback(async () => {
     if (!user || markingMissedCallsSeen || missedCallsTotal <= 0) {
@@ -5130,51 +5068,6 @@ export default function Home() {
                   </span>
                 </div>
 
-                <div className="mb-4 rounded-2xl border border-[var(--line)] bg-[var(--brand-soft)]/40 px-3 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Interests
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Tap a lane to push more of that vibe to the top.
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500">
-                      {activeFeedInterest === "all"
-                        ? "All interests"
-                        : INTEREST_OPTIONS.find((option) => option.id === activeFeedInterest)?.label ?? "All"}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveFeedInterest("all")}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                        activeFeedInterest === "all"
-                          ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                          : "border-[var(--line)] bg-white text-slate-600 hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                      }`}
-                    >
-                      All
-                    </button>
-                    {feedInterestOptions.map((interest) => (
-                      <button
-                        key={`feed-interest-${interest.id}`}
-                        type="button"
-                        onClick={() => setActiveFeedInterest(interest.id)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                          activeFeedInterest === interest.id
-                            ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                            : "border-[var(--line)] bg-white text-slate-600 hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                        }`}
-                      >
-                        {interest.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="space-y-3">
                   {visiblePosts.map((post) => (
                     <FeedPostCard
@@ -5660,16 +5553,9 @@ export default function Home() {
       <button
         type="button"
         className="chat-fab"
-        onClick={() => {
-          if (chatOpen) {
-            setChatOpen(false);
-            return;
-          }
-
-          openChat();
-        }}
+        onClick={openChat}
         aria-label="Open messages"
-        aria-expanded={chatOpen}
+        aria-expanded={false}
         title="Messages"
       >
         <svg

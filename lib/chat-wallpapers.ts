@@ -1,9 +1,9 @@
 export const CHAT_WALLPAPER_OPTIONS = [
   { id: "portrait", label: "Portrait" },
   { id: "midnight", label: "Midnight" },
-  { id: "aurora", label: "Aurora" },
-  { id: "sunset", label: "Sunset" },
-  { id: "ocean", label: "Ocean" },
+  { id: "aurora", label: "Neon Glow" },
+  { id: "sunset", label: "Ember" },
+  { id: "ocean", label: "Tide" },
 ] as const;
 
 export const CHAT_WALLPAPER_TARGETS = [
@@ -25,7 +25,7 @@ export const CHAT_WALLPAPER_BLUR_MAX = 28;
 export const CHAT_WALLPAPER_DIM_MIN = 0;
 export const CHAT_WALLPAPER_DIM_MAX = 70;
 
-const LIGHT_THEME_IDS = new Set(["light", "summer", "spring"]);
+const LIGHT_THEME_IDS = new Set(["light", "summer", "autumn"]);
 
 export function isChatWallpaper(value: string | null | undefined): value is ChatWallpaper {
   return CHAT_WALLPAPER_OPTIONS.some((option) => option.id === value);
