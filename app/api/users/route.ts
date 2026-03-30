@@ -27,6 +27,10 @@ export async function GET(request: Request) {
         accountType: u.accountType,
         avatarUrl: u.avatarUrl,
         avatarGradient: u.avatarGradient,
+        coverTheme: u.coverTheme,
+        coverImageUrl: u.coverImageUrl,
+        profileAccent: u.profileAccent,
+        bio: u.bio,
     }));
 
     return NextResponse.json({ users: data });

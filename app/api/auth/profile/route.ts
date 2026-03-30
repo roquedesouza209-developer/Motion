@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { isChatWallpaper } from "@/lib/chat-wallpapers";
 import { normalizeInterests } from "@/lib/interests";
+import { isProfileAccent, isProfileCoverTheme } from "@/lib/profile-styles";
 import { getAuthUser, toPublicUser } from "@/lib/server/auth";
 import { updateDb } from "@/lib/server/database";
 
@@ -15,6 +16,9 @@ type UpdateProfileBody = {
     hiddenFromIds?: string[];
     interests?: string[];
     chatWallpaper?: string;
+    coverTheme?: string;
+    coverImageUrl?: string;
+    profileAccent?: string;
 };
 
 export async function PATCH(request: Request) {
@@ -41,6 +45,9 @@ export async function PATCH(request: Request) {
     const hiddenFromIds = body.hiddenFromIds;
     const interests = body.interests !== undefined ? normalizeInterests(body.interests) : undefined;
     const chatWallpaper = body.chatWallpaper;
+    const coverTheme = body.coverTheme;
+    const coverImageUrl = body.coverImageUrl !== undefined ? body.coverImageUrl.trim() : undefined;
+    const profileAccent = body.profileAccent;
 
     if (name !== undefined && name.length < 2) {
         return NextResponse.json(
@@ -66,6 +73,13 @@ export async function PATCH(request: Request) {
     if (avatarUrl !== undefined && avatarUrl !== "" && !avatarUrl.startsWith("/uploads/")) {
         return NextResponse.json(
             { error: "Avatar must point to /uploads." },
+            { status: 400 },
+        );
+    }
+
+    if (coverImageUrl !== undefined && coverImageUrl !== "" && !coverImageUrl.startsWith("/uploads/")) {
+        return NextResponse.json(
+            { error: "Cover image must point to /uploads." },
             { status: 400 },
         );
     }
@@ -130,6 +144,24 @@ export async function PATCH(request: Request) {
             userRecord.chatWallpaper = chatWallpaper;
         }
 
+        if (coverTheme !== undefined) {
+            if (!isProfileCoverTheme(coverTheme)) {
+                return { type: "invalid_cover_theme" as const };
+            }
+            userRecord.coverTheme = coverTheme;
+        }
+
+        if (coverImageUrl !== undefined) {
+            userRecord.coverImageUrl = coverImageUrl || undefined;
+        }
+
+        if (profileAccent !== undefined) {
+            if (!isProfileAccent(profileAccent)) {
+                return { type: "invalid_profile_accent" as const };
+            }
+            userRecord.profileAccent = profileAccent;
+        }
+
         return { type: "updated" as const, user: toPublicUser(userRecord) };
     });
 
@@ -154,6 +186,20 @@ export async function PATCH(request: Request) {
     if (result.type === "invalid_wallpaper") {
         return NextResponse.json(
             { error: "Invalid chat wallpaper." },
+            { status: 400 },
+        );
+    }
+
+    if (result.type === "invalid_cover_theme") {
+        return NextResponse.json(
+            { error: "Invalid cover theme." },
+            { status: 400 },
+        );
+    }
+
+    if (result.type === "invalid_profile_accent") {
+        return NextResponse.json(
+            { error: "Invalid profile accent." },
             { status: 400 },
         );
     }

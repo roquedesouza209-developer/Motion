@@ -9,6 +9,12 @@ import {
   isChatWallpaperSelection,
 } from "@/lib/chat-wallpapers";
 import { normalizeInterests } from "@/lib/interests";
+import {
+  DEFAULT_PROFILE_ACCENT,
+  DEFAULT_PROFILE_COVER,
+  isProfileAccent,
+  isProfileCoverTheme,
+} from "@/lib/profile-styles";
 import { createId, createPasswordHash } from "@/lib/server/crypto";
 import type {
   AccountType,
@@ -29,6 +35,7 @@ import type {
   NotificationRecord,
   PostRecord,
   ProfileViewRecord,
+  MoveHighlightRecord,
   RandomChatParticipantRecord,
   RandomChatQueueRecord,
   RandomChatReportRecord,
@@ -109,6 +116,8 @@ function seedUser({
     passwordHash: hash,
     passwordSalt: salt,
     avatarGradient,
+    coverTheme: DEFAULT_PROFILE_COVER,
+    profileAccent: DEFAULT_PROFILE_ACCENT,
     interests,
     chatWallpaper: DEFAULT_CHAT_WALLPAPER,
     createdAt: toIsoWithMinuteOffset(-120),
@@ -554,6 +563,7 @@ function createSeedDatabase(): MotionDb {
   const comments = createSeedComments(posts);
   const profileViews: ProfileViewRecord[] = [];
   const supportRequests: SupportRequestRecord[] = [];
+  const moveHighlights: MoveHighlightRecord[] = [];
   const liveSessions: LiveSessionRecord[] = [];
   const liveComments: LiveCommentRecord[] = [];
   const callSessions: CallSessionRecord[] = [];
@@ -567,6 +577,7 @@ function createSeedDatabase(): MotionDb {
     posts,
     comments,
     stories,
+    moveHighlights,
     liveSessions,
     liveComments,
     callSessions,
@@ -1100,6 +1111,17 @@ function normalizeDatabase(raw: unknown): MotionDb {
           chatWallpaper: isChatWallpaper(user.chatWallpaper)
             ? user.chatWallpaper
             : DEFAULT_CHAT_WALLPAPER,
+          coverTheme: isProfileCoverTheme(user.coverTheme)
+            ? user.coverTheme
+            : DEFAULT_PROFILE_COVER,
+          coverImageUrl:
+            typeof user.coverImageUrl === "string" &&
+            user.coverImageUrl.startsWith("/uploads/")
+              ? user.coverImageUrl
+              : undefined,
+          profileAccent: isProfileAccent(user.profileAccent)
+            ? user.profileAccent
+            : DEFAULT_PROFILE_ACCENT,
           postLayoutOrder: normalizeStringArray(user.postLayoutOrder),
           pinnedPostIds: normalizeStringArray(user.pinnedPostIds),
           lastActiveAt: normalizeLastActive(user),
@@ -1128,6 +1150,76 @@ function normalizeDatabase(raw: unknown): MotionDb {
           replies: normalizeStoryReplies((story as StoryRecord).replies),
           seenBy: Array.isArray(story.seenBy) ? story.seenBy : [],
         }))
+      : [],
+    moveHighlights: Array.isArray((candidate as { moveHighlights?: unknown }).moveHighlights)
+      ? (
+          (candidate as { moveHighlights: unknown[] }).moveHighlights as Partial<MoveHighlightRecord>[]
+        )
+          .filter(
+            (highlight): highlight is Partial<MoveHighlightRecord> & {
+              userId: string;
+              title: string;
+            } =>
+              Boolean(highlight && typeof highlight.userId === "string") &&
+              typeof highlight.title === "string",
+          )
+          .map((highlight) => ({
+            id: typeof highlight.id === "string" ? highlight.id : createId("hgh"),
+            userId: highlight.userId,
+            title: highlight.title.trim() || "Highlight",
+            accent: isProfileAccent(highlight.accent)
+              ? highlight.accent
+              : DEFAULT_PROFILE_ACCENT,
+            items: Array.isArray(highlight.items)
+              ? highlight.items.reduce<MoveHighlightRecord["items"]>((items, item) => {
+                  if (!item || typeof item !== "object") {
+                    return items;
+                  }
+                  const candidateItem = item as MoveHighlightRecord["items"][number];
+                  const normalizedMedia = normalizeMediaList(
+                    candidateItem.media,
+                    candidateItem.mediaUrl,
+                    candidateItem.mediaType,
+                  );
+
+                  items.push({
+                    id:
+                      typeof candidateItem.id === "string"
+                        ? candidateItem.id
+                        : createId("hgi"),
+                    sourceStoryId:
+                      typeof candidateItem.sourceStoryId === "string"
+                        ? candidateItem.sourceStoryId
+                        : undefined,
+                    caption:
+                      typeof candidateItem.caption === "string"
+                        ? candidateItem.caption
+                        : "",
+                    gradient:
+                      typeof candidateItem.gradient === "string"
+                        ? candidateItem.gradient
+                        : "linear-gradient(135deg, #4facfe, #00f2fe)",
+                    ...normalizedMedia,
+                    createdAt:
+                      typeof candidateItem.createdAt === "string"
+                        ? candidateItem.createdAt
+                        : new Date().toISOString(),
+                  });
+
+                  return items;
+                }, [])
+              : [],
+            createdAt:
+              typeof highlight.createdAt === "string"
+                ? highlight.createdAt
+                : new Date().toISOString(),
+            updatedAt:
+              typeof highlight.updatedAt === "string"
+                ? highlight.updatedAt
+                : typeof highlight.createdAt === "string"
+                  ? highlight.createdAt
+                  : new Date().toISOString(),
+          }))
       : [],
     liveSessions: normalizedLiveSessions,
     liveComments: normalizedLiveComments,

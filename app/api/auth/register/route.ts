@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { DEFAULT_CHAT_WALLPAPER } from "@/lib/chat-wallpapers";
 import { normalizeInterests } from "@/lib/interests";
+import { DEFAULT_PROFILE_ACCENT, DEFAULT_PROFILE_COVER } from "@/lib/profile-styles";
 import { attachSessionCookie, toPublicUser, SESSION_MAX_AGE_SECONDS } from "@/lib/server/auth";
 import { createId, createPasswordHash } from "@/lib/server/crypto";
 import { updateDb } from "@/lib/server/database";
@@ -98,6 +99,8 @@ export async function POST(request: Request) {
       passwordHash: hash,
       passwordSalt: salt,
       avatarGradient: AVATAR_GRADIENTS[db.users.length % AVATAR_GRADIENTS.length],
+      coverTheme: DEFAULT_PROFILE_COVER,
+      profileAccent: DEFAULT_PROFILE_ACCENT,
       interests,
       chatWallpaper: DEFAULT_CHAT_WALLPAPER,
       createdAt: new Date().toISOString(),

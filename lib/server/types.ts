@@ -9,6 +9,8 @@ export type InterestKey = "tech" | "sports" | "fashion" | "travel" | "gaming";
 export type CreatorReportFrequency = "daily" | "weekly" | "monthly";
 export type CreatorReportFormat = "csv" | "json" | "excel" | "pdf";
 export type CreatorReportRange = "7d" | "30d" | "90d";
+export type ProfileCoverTheme = "midnight" | "sunrise" | "aurora" | "studio";
+export type ProfileAccent = "cobalt" | "ember" | "jade" | "violet";
 export type CallMode = "voice" | "video";
 export type CallStatus = "ringing" | "connecting" | "active" | "declined" | "ended" | "missed";
 export type CallSignalType = "offer" | "answer" | "ice";
@@ -52,6 +54,9 @@ export type UserRecord = {
   avatarGradient: string;
   avatarUrl?: string;
   bio?: string;
+  coverTheme?: ProfileCoverTheme;
+  coverImageUrl?: string;
+  profileAccent?: ProfileAccent;
   interests?: InterestKey[];
   chatWallpaper?: ChatWallpaper;
   feedVisibility?: FeedVisibility;
@@ -125,6 +130,27 @@ export type StoryRecord = {
   createdAt: string;
   expiresAt: string;
   seenBy: string[];
+};
+
+export type MoveHighlightItemRecord = {
+  id: string;
+  sourceStoryId?: string;
+  caption: string;
+  gradient: string;
+  media?: MediaItem[];
+  mediaUrl?: string;
+  mediaType?: "image" | "video";
+  createdAt: string;
+};
+
+export type MoveHighlightRecord = {
+  id: string;
+  userId: string;
+  title: string;
+  accent?: ProfileAccent;
+  items: MoveHighlightItemRecord[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type LiveSessionRecord = {
@@ -349,6 +375,7 @@ export type MotionDb = {
   posts: PostRecord[];
   comments: CommentRecord[];
   stories: StoryRecord[];
+  moveHighlights: MoveHighlightRecord[];
   liveSessions: LiveSessionRecord[];
   liveComments: LiveCommentRecord[];
   conversations: ConversationRecord[];
@@ -368,7 +395,7 @@ export type MotionDb = {
 export type PublicUser = Pick<
   UserRecord,
   "id" | "name" | "handle" | "role" | "accountType" | "email" | "avatarGradient" | "avatarUrl" | "bio" | "feedVisibility" | "hiddenFromIds"
-  | "interests" | "chatWallpaper"
+  | "interests" | "chatWallpaper" | "coverTheme" | "coverImageUrl" | "profileAccent"
 >;
 
 export type PostCoAuthor = Pick<
@@ -411,6 +438,7 @@ export type StoryDto = {
   name: string;
   handle: string;
   role: string;
+  createdAt: string;
   minutesLeft: number;
   gradient: string;
   caption: string;
@@ -450,6 +478,32 @@ export type StoryDto = {
       time: string;
     }[];
   };
+};
+
+export type MoveHighlightDto = {
+  id: string;
+  title: string;
+  accent: ProfileAccent;
+  createdAt: string;
+  updatedAt: string;
+  itemCount: number;
+  preview?: {
+    caption: string;
+    gradient: string;
+    media?: MediaItem[];
+    mediaUrl?: string;
+    mediaType?: "image" | "video";
+    createdAt: string;
+  };
+  items: {
+    id: string;
+    caption: string;
+    gradient: string;
+    media?: MediaItem[];
+    mediaUrl?: string;
+    mediaType?: "image" | "video";
+    createdAt: string;
+  }[];
 };
 
 export type MessageDto = {

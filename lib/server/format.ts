@@ -11,6 +11,8 @@ import type {
   MediaItem,
   MessageDto,
   MessageRecord,
+  MoveHighlightDto,
+  MoveHighlightRecord,
   PostDto,
   PostRecord,
   Presence,
@@ -698,6 +700,7 @@ export function mapStoryToDto({
     name: owner?.name.split(" ")[0] ?? "Creator",
     handle: owner ? `@${owner.handle}` : "@creator",
     role: owner?.role ?? "Member",
+    createdAt: story.createdAt,
     minutesLeft,
     gradient: story.gradient,
     caption: story.caption,
@@ -710,6 +713,38 @@ export function mapStoryToDto({
     media,
     mediaUrl: story.mediaUrl ?? primary?.url,
     mediaType: story.mediaType ?? primary?.type,
+  };
+}
+
+export function mapMoveHighlightToDto(highlight: MoveHighlightRecord): MoveHighlightDto {
+  const preview = highlight.items[0];
+
+  return {
+    id: highlight.id,
+    title: highlight.title,
+    accent: highlight.accent ?? "cobalt",
+    createdAt: highlight.createdAt,
+    updatedAt: highlight.updatedAt,
+    itemCount: highlight.items.length,
+    preview: preview
+      ? {
+          caption: preview.caption,
+          gradient: preview.gradient,
+          media: preview.media,
+          mediaUrl: preview.mediaUrl,
+          mediaType: preview.mediaType,
+          createdAt: preview.createdAt,
+        }
+      : undefined,
+    items: highlight.items.map((item) => ({
+      id: item.id,
+      caption: item.caption,
+      gradient: item.gradient,
+      media: item.media,
+      mediaUrl: item.mediaUrl,
+      mediaType: item.mediaType,
+      createdAt: item.createdAt,
+    })),
   };
 }
 

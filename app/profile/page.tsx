@@ -1,13 +1,18 @@
 "use client";
 
 import FollowListModal from "@/components/profile/follow-list-modal";
+import CreateMoveHighlightModal from "@/components/profile/create-move-highlight-modal";
 import DeleteAccountModal from "@/components/profile/delete-account-modal";
 import EditProfileModal from "@/components/profile/edit-profile-modal";
+import MoveHighlightsStrip from "@/components/profile/move-highlights-strip";
+import PinnedPostsSection from "@/components/profile/pinned-posts-section";
 import ProfileHero from "@/components/profile/profile-hero";
 import ProfileMediaGrid from "@/components/profile/profile-media-grid";
 import PrivacySettingsModal from "@/components/profile/privacy-settings-modal";
 import TimeCapsuleModal from "@/components/profile/time-capsule-modal";
 import type { InterestKey } from "@/lib/interests";
+import { DEFAULT_PROFILE_ACCENT, DEFAULT_PROFILE_COVER } from "@/lib/profile-styles";
+import type { MoveHighlightDto, ProfileAccent, ProfileCoverTheme } from "@/lib/server/types";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -27,6 +32,9 @@ type User = {
   avatarGradient: string;
   avatarUrl?: string;
   bio?: string;
+  coverTheme?: ProfileCoverTheme;
+  coverImageUrl?: string;
+  profileAccent?: ProfileAccent;
   interests?: InterestKey[];
   feedVisibility?: FeedVisibility;
   hiddenFromIds?: string[];
@@ -76,6 +84,16 @@ type FollowUser = {
   accountType?: AccountType;
   avatarUrl?: string;
   avatarGradient: string;
+};
+
+type StoryCandidate = {
+  id: string;
+  ownerId: string;
+  caption: string;
+  gradient: string;
+  mediaUrl?: string;
+  mediaType?: MediaType;
+  createdAt: string;
 };
 
 function parseStoredOrder(input: string | null): string[] {
@@ -270,7 +288,11 @@ export default function ProfilePage() {
   const [editHandle, setEditHandle] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editAvatarUrl, setEditAvatarUrl] = useState("");
+  const [editCoverImageUrl, setEditCoverImageUrl] = useState("");
+  const [editCoverTheme, setEditCoverTheme] = useState<ProfileCoverTheme>(DEFAULT_PROFILE_COVER);
+  const [editProfileAccent, setEditProfileAccent] = useState<ProfileAccent>(DEFAULT_PROFILE_ACCENT);
   const [editAvatarUploading, setEditAvatarUploading] = useState(false);
+  const [editCoverUploading, setEditCoverUploading] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
@@ -296,6 +318,17 @@ export default function ProfilePage() {
   const [privacyError, setPrivacyError] = useState<string | null>(null);
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userSearchResults, setUserSearchResults] = useState<{ id: string; name: string; handle: string; avatarUrl?: string; avatarGradient: string }[]>([]);
+  const [moveHighlights, setMoveHighlights] = useState<MoveHighlightDto[]>([]);
+  const [highlightsLoading, setHighlightsLoading] = useState(false);
+  const [highlightComposerOpen, setHighlightComposerOpen] = useState(false);
+  const [highlightComposerTitle, setHighlightComposerTitle] = useState("");
+  const [highlightComposerAccent, setHighlightComposerAccent] =
+    useState<ProfileAccent>(DEFAULT_PROFILE_ACCENT);
+  const [highlightCandidates, setHighlightCandidates] = useState<StoryCandidate[]>([]);
+  const [highlightCandidatesLoading, setHighlightCandidatesLoading] = useState(false);
+  const [selectedHighlightStoryIds, setSelectedHighlightStoryIds] = useState<string[]>([]);
+  const [highlightSaving, setHighlightSaving] = useState(false);
+  const [highlightError, setHighlightError] = useState<string | null>(null);
 
   useEffect(() => {
     const syncTabFromUrl = () => {
@@ -432,6 +465,10 @@ export default function ProfilePage() {
                 accountType?: AccountType;
                 avatarUrl?: string;
                 avatarGradient: string;
+                coverTheme?: ProfileCoverTheme;
+                coverImageUrl?: string;
+                profileAccent?: ProfileAccent;
+                bio?: string;
               }[];
             }>(`/api/users?q=${requestedHandle}`);
             const match = usersRes.users.find(
@@ -448,6 +485,10 @@ export default function ProfilePage() {
                 accountType: match.accountType,
                 avatarGradient: match.avatarGradient,
                 avatarUrl: match.avatarUrl,
+                coverTheme: match.coverTheme,
+                coverImageUrl: match.coverImageUrl,
+                profileAccent: match.profileAccent,
+                bio: match.bio,
               });
               setActiveTab("posts");
               if (currentUser) {
@@ -551,6 +592,41 @@ export default function ProfilePage() {
     };
   }, [allPosts, isViewingSelf, profileOwner, profileOwnerId]);
 
+  useEffect(() => {
+    if (!profileOwner) {
+      setMoveHighlights([]);
+      return;
+    }
+
+    let active = true;
+    setHighlightsLoading(true);
+
+    const loadHighlights = async () => {
+      try {
+        const payload = await apiGet<{ highlights: MoveHighlightDto[] }>(
+          `/api/profile/highlights?user=${encodeURIComponent(profileOwner.id)}`,
+        );
+        if (active) {
+          setMoveHighlights(payload.highlights);
+        }
+      } catch {
+        if (active) {
+          setMoveHighlights([]);
+        }
+      } finally {
+        if (active) {
+          setHighlightsLoading(false);
+        }
+      }
+    };
+
+    void loadHighlights();
+
+    return () => {
+      active = false;
+    };
+  }, [profileOwner]);
+
   const taggedPosts = useMemo(() => {
     if (!profileOwner) {
       return [] as Post[];
@@ -597,17 +673,25 @@ export default function ProfilePage() {
     () => binPosts.filter((post) => !isBinExpired(post.deletedAt)),
     [binPosts],
   );
-  const visiblePosts = isViewingSelf
+  const featuredPinnedPosts = useMemo(
+    () => profilePosts.filter((post) => displayPinnedSet.has(post.id)),
+    [displayPinnedSet, profilePosts],
+  );
+  const baseVisiblePosts = isViewingSelf
     ? activeTab === "saved"
       ? savedPosts
       : activeTab === "tagged"
         ? taggedPosts
         : activeTab === "archive"
           ? archivePosts
-        : activeTab === "bin"
-          ? binVisiblePosts
-          : posts
+          : activeTab === "bin"
+            ? binVisiblePosts
+            : posts
     : profilePosts;
+  const visiblePosts =
+    activeTab === "posts"
+      ? baseVisiblePosts.filter((post) => !displayPinnedSet.has(post.id))
+      : baseVisiblePosts;
   const canReorder = isViewingSelf && activeTab === "posts" && layoutEditMode;
   const capsuleMinValue = toDateTimeLocalValue(Date.now() + 60_000);
 
@@ -1305,6 +1389,9 @@ export default function ProfilePage() {
     setEditHandle(user.handle);
     setEditBio(user.bio ?? "");
     setEditAvatarUrl(user.avatarUrl ?? "");
+    setEditCoverImageUrl(user.coverImageUrl ?? "");
+    setEditCoverTheme(user.coverTheme ?? DEFAULT_PROFILE_COVER);
+    setEditProfileAccent(user.profileAccent ?? DEFAULT_PROFILE_ACCENT);
     setEditError(null);
     setEditOpen(true);
   };
@@ -1327,6 +1414,27 @@ export default function ProfilePage() {
     }
   };
 
+  const uploadCover = async (file: File) => {
+    setEditCoverUploading(true);
+    setEditError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("kind", "Photo");
+      const response = await fetch("/api/media/upload", { method: "POST", body: fd });
+      const payload = (await response.json().catch(() => ({}))) as {
+        mediaUrl?: string;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error ?? "Upload failed.");
+      if (payload.mediaUrl) setEditCoverImageUrl(payload.mediaUrl);
+    } catch (uploadError) {
+      setEditError(uploadError instanceof Error ? uploadError.message : "Upload failed.");
+    } finally {
+      setEditCoverUploading(false);
+    }
+  };
+
   const saveProfile = async () => {
     if (!user) return;
     setEditSaving(true);
@@ -1336,7 +1444,15 @@ export default function ProfilePage() {
       const response = await fetch("/api/auth/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: `${editFirstName.trim()} ${editLastName.trim()}`.trim(), handle: editHandle.trim(), bio: editBio.trim(), avatarUrl: editAvatarUrl }),
+        body: JSON.stringify({
+          name: `${editFirstName.trim()} ${editLastName.trim()}`.trim(),
+          handle: editHandle.trim(),
+          bio: editBio.trim(),
+          avatarUrl: editAvatarUrl,
+          coverImageUrl: editCoverImageUrl,
+          coverTheme: editCoverTheme,
+          profileAccent: editProfileAccent,
+        }),
       });
       const payload = (await response.json().catch(() => ({}))) as {
         user?: User;
@@ -1361,6 +1477,101 @@ export default function ProfilePage() {
       );
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const openHighlightComposer = async () => {
+    if (!user) {
+      return;
+    }
+
+    setHighlightComposerOpen(true);
+    setHighlightComposerTitle("");
+    setHighlightComposerAccent(user.profileAccent ?? DEFAULT_PROFILE_ACCENT);
+    setHighlightCandidates([]);
+    setSelectedHighlightStoryIds([]);
+    setHighlightError(null);
+    setHighlightCandidatesLoading(true);
+
+    try {
+      const payload = await apiGet<{ stories: StoryCandidate[] }>("/api/stories");
+      const mine = payload.stories
+        .filter((story) => story.ownerId === user.id)
+        .sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+      setHighlightCandidates(mine);
+    } catch (loadError) {
+      setHighlightCandidates([]);
+      setHighlightError(
+        loadError instanceof Error ? loadError.message : "Failed to load Moves.",
+      );
+    } finally {
+      setHighlightCandidatesLoading(false);
+    }
+  };
+
+  const saveHighlight = async () => {
+    if (!user) {
+      return;
+    }
+
+    setHighlightSaving(true);
+    setHighlightError(null);
+
+    try {
+      const response = await fetch("/api/profile/highlights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: highlightComposerTitle.trim(),
+          accent: highlightComposerAccent,
+          storyIds: selectedHighlightStoryIds,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        highlight?: MoveHighlightDto;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.highlight) {
+        throw new Error(payload.error ?? "Failed to create highlight.");
+      }
+
+      setMoveHighlights((current) => [payload.highlight!, ...current]);
+      setHighlightComposerOpen(false);
+      setHighlightComposerTitle("");
+      setSelectedHighlightStoryIds([]);
+      setHighlightCandidates([]);
+    } catch (saveError) {
+      setHighlightError(
+        saveError instanceof Error ? saveError.message : "Failed to create highlight.",
+      );
+    } finally {
+      setHighlightSaving(false);
+    }
+  };
+
+  const deleteHighlight = async (highlightId: string) => {
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/profile/highlights/${highlightId}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to delete highlight.");
+      }
+
+      setMoveHighlights((current) =>
+        current.filter((highlight) => highlight.id !== highlightId),
+      );
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error ? deleteError.message : "Failed to delete highlight.",
+      );
     }
   };
 
@@ -1467,42 +1678,59 @@ export default function ProfilePage() {
           <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Profile</p>
         </div>
 
-        <section className="motion-surface p-5">
-          <ProfileHero
-            owner={profileOwner}
-            isViewingSelf={isViewingSelf}
-            viewerEmail={user?.email}
-            isAuthenticated={Boolean(user)}
-            postCount={profilePosts.length}
-            followerCount={followStats.followerCount}
-            followingCount={followStats.followingCount}
-            savedCount={savedPosts.length}
-            isFollowing={followStats.isFollowing}
-            followLoading={followLoading}
-            tabs={PROFILE_TABS}
-            activeTab={activeTab}
-            layoutEditMode={layoutEditMode}
-            showCreatorStudio={currentAccountType === "creator"}
-            onSelectTab={(tabId) => {
-              const nextTab = PROFILE_TABS.find((tab) => tab.id === tabId);
-              if (nextTab) {
-                selectTab(nextTab.id);
+        <ProfileHero
+          owner={profileOwner}
+          isViewingSelf={isViewingSelf}
+          viewerEmail={user?.email}
+          isAuthenticated={Boolean(user)}
+          postCount={profilePosts.length}
+          followerCount={followStats.followerCount}
+          followingCount={followStats.followingCount}
+          savedCount={savedPosts.length}
+          isFollowing={followStats.isFollowing}
+          followLoading={followLoading}
+          tabs={PROFILE_TABS}
+          activeTab={activeTab}
+          layoutEditMode={layoutEditMode}
+          showCreatorStudio={currentAccountType === "creator"}
+          onSelectTab={(tabId) => {
+            const nextTab = PROFILE_TABS.find((tab) => tab.id === tabId);
+            if (nextTab) {
+              selectTab(nextTab.id);
+            }
+          }}
+          onOpenFollowers={() => openFollowList("followers")}
+          onOpenFollowing={() => openFollowList("following")}
+          onToggleLayoutEdit={() => {
+            setLayoutEditMode((current) => !current);
+            setDraggingId(null);
+            setDragOverId(null);
+          }}
+          onOpenSettings={openPrivacySettings}
+          onOpenEditProfile={openEditProfile}
+          onOpenDeleteAccount={() => setDeleteAccountOpen(true)}
+          onToggleFollow={toggleFollow}
+        />
+
+        {isViewingSelf || highlightsLoading || moveHighlights.length > 0 ? (
+          <>
+            <MoveHighlightsStrip
+              highlights={moveHighlights}
+              isViewingSelf={isViewingSelf}
+              onCreate={() => void openHighlightComposer()}
+              onDelete={
+                isViewingSelf ? (highlightId) => void deleteHighlight(highlightId) : undefined
               }
-            }}
-            onOpenFollowers={() => openFollowList("followers")}
-            onOpenFollowing={() => openFollowList("following")}
-            onToggleLayoutEdit={() => {
-              setLayoutEditMode((current) => !current);
-              setDraggingId(null);
-              setDragOverId(null);
-            }}
-            onOpenSettings={openPrivacySettings}
-            onOpenEditProfile={openEditProfile}
-            onOpenDeleteAccount={() => setDeleteAccountOpen(true)}
-            onToggleFollow={toggleFollow}
-          />
+            />
+            {highlightsLoading ? (
+              <p className="mt-3 text-xs text-slate-500">Loading highlight updates...</p>
+            ) : null}
+          </>
+        ) : null}
+
+        <section className="motion-surface mt-5 p-5">
           {layoutEditMode && activeTab === "posts" ? (
-            <p className="mt-3 text-xs text-slate-500">
+            <p className="text-xs text-slate-500">
               Layout edit is on. Drag posts to rearrange, tap the pin to lock placement.
             </p>
           ) : null}
@@ -1523,32 +1751,46 @@ export default function ProfilePage() {
             </p>
           ) : null}
 
-          <ProfileMediaGrid
-            posts={visiblePosts}
-            activeTab={activeTab}
-            layoutEditMode={layoutEditMode}
-            draggingId={draggingId}
-            dragOverId={dragOverId}
-            canReorder={canReorder}
-            viewerUserId={user?.id ?? null}
-            displayPinnedIds={displayPinnedSet}
-            capsuleActionId={capsuleActionId}
-            capsuleSaving={capsuleSaving}
-            capsuleEditorPostId={capsuleEditorPost?.id ?? null}
-            onToggleSave={toggleSave}
-            onDelete={deletePost}
-            onRestore={restorePost}
-            onArchive={archivePost}
-            onUnarchive={unarchivePost}
-            onEditCapsule={openCapsuleEditor}
-            onPublishCapsuleNow={publishCapsuleNow}
-            onTogglePin={togglePin}
-            onWithdrawInvite={withdrawCollabInvite}
-            onDragStartFor={handleDragStart}
-            onDragOverFor={handleDragOver}
-            onDropFor={handleDrop}
-            onDragEnd={handleDragEnd}
-          />
+          {activeTab === "posts" ? (
+            <PinnedPostsSection
+              posts={featuredPinnedPosts}
+              isViewingSelf={isViewingSelf}
+              onTogglePin={isViewingSelf ? togglePin : undefined}
+            />
+          ) : null}
+
+          {activeTab === "posts" && visiblePosts.length === 0 && featuredPinnedPosts.length > 0 ? (
+            <div className="mt-5 rounded-2xl border border-[var(--line)] bg-white px-4 py-6 text-sm text-slate-500">
+              All current posts are featured in the pinned section above.
+            </div>
+          ) : (
+            <ProfileMediaGrid
+              posts={visiblePosts}
+              activeTab={activeTab}
+              layoutEditMode={layoutEditMode}
+              draggingId={draggingId}
+              dragOverId={dragOverId}
+              canReorder={canReorder}
+              viewerUserId={user?.id ?? null}
+              displayPinnedIds={displayPinnedSet}
+              capsuleActionId={capsuleActionId}
+              capsuleSaving={capsuleSaving}
+              capsuleEditorPostId={capsuleEditorPost?.id ?? null}
+              onToggleSave={toggleSave}
+              onDelete={deletePost}
+              onRestore={restorePost}
+              onArchive={archivePost}
+              onUnarchive={unarchivePost}
+              onEditCapsule={openCapsuleEditor}
+              onPublishCapsuleNow={publishCapsuleNow}
+              onTogglePin={togglePin}
+              onWithdrawInvite={withdrawCollabInvite}
+              onDragStartFor={handleDragStart}
+              onDragOverFor={handleDragOver}
+              onDropFor={handleDrop}
+              onDragEnd={handleDragEnd}
+            />
+          )}
         </section>
       </div>
 
@@ -1582,7 +1824,11 @@ export default function ProfilePage() {
         handle={editHandle}
         bio={editBio}
         avatarUrl={editAvatarUrl}
+        coverImageUrl={editCoverImageUrl}
+        coverTheme={editCoverTheme}
+        profileAccent={editProfileAccent}
         avatarUploading={editAvatarUploading}
+        coverUploading={editCoverUploading}
         previewName={user?.name ?? profileOwner?.name ?? "Motion"}
         previewGradient={
           user?.avatarGradient ??
@@ -1594,11 +1840,43 @@ export default function ProfilePage() {
         onChangeLastName={setEditLastName}
         onChangeHandle={setEditHandle}
         onChangeBio={setEditBio}
+        onSelectCoverTheme={setEditCoverTheme}
+        onSelectProfileAccent={setEditProfileAccent}
         onUploadAvatar={(file) => {
           void uploadAvatar(file);
         }}
+        onUploadCover={(file) => {
+          void uploadCover(file);
+        }}
         onRemoveAvatar={() => setEditAvatarUrl("")}
+        onRemoveCover={() => setEditCoverImageUrl("")}
         onSave={() => void saveProfile()}
+      />
+
+      <CreateMoveHighlightModal
+        open={highlightComposerOpen}
+        loading={highlightCandidatesLoading}
+        saving={highlightSaving}
+        error={highlightError}
+        title={highlightComposerTitle}
+        accent={highlightComposerAccent}
+        candidates={highlightCandidates}
+        selectedIds={selectedHighlightStoryIds}
+        onClose={() => {
+          if (!highlightSaving) {
+            setHighlightComposerOpen(false);
+          }
+        }}
+        onChangeTitle={setHighlightComposerTitle}
+        onChangeAccent={setHighlightComposerAccent}
+        onToggleCandidate={(storyId) => {
+          setSelectedHighlightStoryIds((current) =>
+            current.includes(storyId)
+              ? current.filter((id) => id !== storyId)
+              : [...current, storyId],
+          );
+        }}
+        onSave={() => void saveHighlight()}
       />
 
       <PrivacySettingsModal
