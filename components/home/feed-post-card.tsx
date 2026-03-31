@@ -89,34 +89,34 @@ export default function FeedPostCard({
   const showFollowButton = Boolean(viewerId && !isOwnPost);
 
   return (
-    <article className="post-card rounded-2xl border border-[var(--line)] bg-white p-4">
+    <article className="post-card motion-soft-card rounded-2xl border border-[var(--line)] p-4">
       <div className="mb-2 flex items-center justify-between">
         <div>
           <button
             type="button"
             onClick={() => onOpenProfile(post.handle)}
-            className="text-left text-sm font-semibold text-slate-900 hover:text-[var(--brand)]"
+            className="text-left text-sm font-semibold text-[var(--ink-strong)] hover:text-[var(--brand)]"
           >
             {post.author}
           </button>
           <button
             type="button"
             onClick={() => onOpenProfile(post.handle)}
-            className="block text-left text-xs text-slate-500 hover:text-[var(--brand)]"
+            className="block text-left text-xs text-[var(--muted-ink)] hover:text-[var(--brand)]"
           >
             {post.location ? `${post.handle} - ${post.location}` : post.handle}
           </button>
           {post.coAuthors && post.coAuthors.length > 0 ? (
-            <p className="mt-0.5 text-[11px] text-slate-500">
+            <p className="mt-0.5 text-[11px] text-[var(--muted-ink)]">
               with {post.coAuthors.map((coAuthor) => `@${coAuthor.handle}`).join(" & ")}
             </p>
           ) : null}
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-[var(--muted-ink)]">
             <LivePostAge createdAt={post.createdAt} initialLabel={post.timeAgo} />
           </span>
-          <span className="rounded-full bg-[var(--brand-soft)] px-2 py-1 text-[11px]">
+          <span className="rounded-full border border-[color-mix(in_srgb,var(--line)_68%,transparent)] bg-[color-mix(in_srgb,var(--brand-soft)_62%,var(--plain-bg)_38%)] px-2 py-1 text-[11px] text-[var(--ink)]">
             {post.kind}
           </span>
           {post.collabInvites && post.collabInvites.length > 0 ? (
@@ -130,7 +130,7 @@ export default function FeedPostCard({
                 <button
                   type="button"
                   onClick={onWithdrawInvite}
-                  className="rounded-full border border-amber-200 px-2 py-1 text-[10px] font-semibold text-amber-700 hover:border-amber-300"
+                  className="rounded-full border border-amber-200 bg-[color-mix(in_srgb,var(--plain-bg)_90%,transparent)] px-2 py-1 text-[10px] font-semibold text-amber-700 hover:border-amber-300"
                 >
                   Withdraw
                 </button>
@@ -143,7 +143,7 @@ export default function FeedPostCard({
               onClick={onToggleFollow}
               className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
                 isFollowing
-                  ? "border border-[var(--line)] bg-white text-slate-600 hover:border-[var(--brand)]"
+                  ? "border border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_92%,transparent)] text-[var(--ink)] hover:border-[var(--brand)]"
                   : "bg-[var(--brand)] text-white"
               }`}
             >
@@ -154,7 +154,7 @@ export default function FeedPostCard({
             <button
               type="button"
               onClick={onReport}
-              className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
+              className="rounded-full border border-amber-200 bg-[color-mix(in_srgb,var(--plain-bg)_90%,#f9d8b4_10%)] px-3 py-1 text-[11px] font-semibold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
             >
               Report
             </button>
@@ -179,7 +179,7 @@ export default function FeedPostCard({
         ) : null}
       </div>
 
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-[var(--ink)]">
         <CaptionWithHashtags caption={post.caption} />
       </p>
       <InterestBadges interests={interestBadges} variant="accent" />
@@ -189,7 +189,9 @@ export default function FeedPostCard({
           <button
             onClick={onLike}
             className={`rounded-full border px-3 py-1 ${
-              post.liked ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)]"
+              post.liked
+                ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                : "border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_86%,transparent)] text-[var(--ink)]"
             }`}
             type="button"
           >
@@ -198,7 +200,7 @@ export default function FeedPostCard({
           <button
             type="button"
             onClick={onComment}
-            className="rounded-full border border-[var(--line)] px-3 py-1"
+            className="rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_86%,transparent)] px-3 py-1 text-[var(--ink)]"
           >
             Comment {post.comments}
           </button>
@@ -208,7 +210,7 @@ export default function FeedPostCard({
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 ${
               post.saved
                 ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                : "border-[var(--line)] text-slate-600"
+                : "border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_86%,transparent)] text-[var(--ink)]"
             }`}
             aria-label={post.saved ? "Remove from vault" : "Vault post"}
             title={post.saved ? "Vaulted" : "Vault"}
@@ -222,7 +224,7 @@ export default function FeedPostCard({
             type="button"
             data-share-trigger="true"
             onClick={onToggleShare}
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-slate-600"
+            className="rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_86%,transparent)] px-3 py-1 text-[var(--ink)]"
             aria-label="Share"
             aria-expanded={shareOpen}
           >
@@ -231,25 +233,25 @@ export default function FeedPostCard({
           {shareOpen ? (
             <div
               data-share-menu="true"
-              className="absolute right-0 top-full mt-2 w-44 max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--line)] bg-white p-2 shadow-lg"
+              className="absolute right-0 top-full mt-2 w-44 max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_96%,transparent)] p-2 shadow-lg"
             >
               <button
                 type="button"
                 onClick={onShareToAccount}
-                className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-[var(--brand-soft)]"
+                className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[var(--ink)] transition hover:bg-[var(--brand-soft)]"
               >
                 Share to account
               </button>
               <button
                 type="button"
                 onClick={onCopyLink}
-                className="mt-1 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-[var(--brand-soft)]"
+                className="mt-1 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[var(--ink)] transition hover:bg-[var(--brand-soft)]"
               >
                 Copy link
               </button>
             </div>
           ) : null}
-          {shareNotice ? <span className="mt-2 text-[10px] text-slate-500">{shareNotice}</span> : null}
+          {shareNotice ? <span className="mt-2 text-[10px] text-[var(--muted-ink)]">{shareNotice}</span> : null}
         </div>
       </div>
     </article>

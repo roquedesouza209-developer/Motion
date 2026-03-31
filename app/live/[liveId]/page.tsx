@@ -321,7 +321,7 @@ export default function LiveRoomPage() {
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(22rem,0.9fr)]">
           <section className="motion-surface overflow-hidden p-0">
-            <div className="relative min-h-[28rem] overflow-hidden rounded-[inherit] bg-[radial-gradient(circle_at_top,#3b82f655,#0f172acc_55%),linear-gradient(140deg,#111827,#0b1220,#020617)]">
+            <div className="relative min-h-[28rem] overflow-hidden rounded-[inherit] bg-[radial-gradient(circle_at_top,rgba(215,118,86,0.34),rgba(20,16,14,0.82)_55%),linear-gradient(140deg,#1a1513,#120f0e,#070605)]">
               <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:2.75rem_2.75rem] opacity-25" />
               {session.isHost && cameraReady ? (
                 <video

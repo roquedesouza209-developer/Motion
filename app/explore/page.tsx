@@ -154,7 +154,7 @@ function ViewportPicker({
                 className={`w-full rounded-lg border px-3 py-2 text-left text-xs font-semibold ${
                   mode === option.id
                     ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                    : "border-[var(--line)] bg-white text-slate-700"
+                    : "border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_92%,transparent)] text-[var(--ink)]"
                 }`}
               >
                 {option.label}
@@ -202,7 +202,7 @@ function ExploreTile({
 
   return (
     <article
-      className={`explore-mosaic-item group overflow-hidden rounded-2xl border border-[var(--line)] bg-white ${
+      className={`explore-mosaic-item motion-soft-card motion-soft-card-hover group overflow-hidden rounded-2xl ${
         featured ? "is-featured" : ""
       }`}
       style={{
@@ -244,7 +244,7 @@ function ExploreTile({
         </div>
         {featured ? (
           <div
-            className={`absolute left-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-slate-900 backdrop-blur-sm ${
+            className={`absolute left-3 rounded-full bg-[color-mix(in_srgb,var(--plain-bg-elevated)_88%,transparent)] px-2 py-1 text-[10px] font-semibold text-[var(--ink-strong)] backdrop-blur-sm ${
               post.immersiveVideo ? "top-[4.3rem]" : "top-10"
             }`}
           >
@@ -301,7 +301,7 @@ function TrendingCard({
   const interestBadges = resolvePostInterests(post);
 
   return (
-    <article className="group rounded-2xl border border-[var(--line)] bg-white p-3 transition hover:-translate-y-0.5 hover:border-[var(--brand)]">
+    <article className="motion-soft-card motion-soft-card-hover group rounded-2xl p-3">
       <div className="relative h-36 overflow-hidden rounded-xl">
         {post.mediaUrl && post.mediaType === "image" ? (
           <Image
@@ -338,11 +338,11 @@ function TrendingCard({
         <button
           type="button"
           onClick={() => onOpenProfile(post.handle)}
-          className="text-left text-sm font-semibold text-slate-900 hover:text-[var(--brand)]"
+          className="text-left text-sm font-semibold text-[var(--ink-strong)] hover:text-[var(--brand)]"
         >
           {post.author}
         </button>
-        <p className="line-clamp-2 text-xs text-slate-500">
+        <p className="line-clamp-2 text-xs text-[var(--muted-ink)]">
           {post.caption ? (
             <CaptionWithHashtags caption={post.caption} />
           ) : (
@@ -350,7 +350,7 @@ function TrendingCard({
           )}
         </p>
         <InterestBadges interests={interestBadges} />
-        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--muted-ink)]/80">
           <span>{post.likes} likes</span>
           <span>{post.comments} comments</span>
           <span>{post.shareCount} shares</span>
@@ -701,7 +701,7 @@ export default function ExplorePage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/"
-            className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+            className="rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_92%,transparent)] px-4 py-2 text-sm font-semibold text-[var(--ink)]"
           >
             Back to Feed
           </Link>
@@ -723,28 +723,28 @@ export default function ExplorePage() {
                   .slice(0, 2)}
               </button>
             ) : null}
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Explore</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-[var(--muted-ink)]">Explore</p>
           </div>
         </div>
 
         <section className="motion-surface p-5">
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted-ink)]">
                 Explore
               </p>
               <h1
-                className="mt-2 text-3xl font-semibold text-slate-900"
+                className="mt-2 text-3xl font-semibold text-[var(--ink-strong)]"
                 style={{ fontFamily: "var(--font-heading)" }}
               >
                 Fresh explore, separate from feed.
               </h1>
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-[var(--muted-ink)]">
                 Explore trending posts and reels without loading down the main feed.
               </p>
             </div>
 
-            <div className="inline-flex rounded-full border border-[var(--line)] bg-white p-1">
+            <div className="motion-pill-bar">
               {[
                 { id: "all" as const, label: "All" },
                 { id: "photos" as const, label: "Posts" },
@@ -754,9 +754,7 @@ export default function ExplorePage() {
                   key={option.id}
                   type="button"
                   onClick={() => setFilter(option.id)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                    filter === option.id ? "bg-[var(--brand)] text-white" : "text-slate-600"
-                  }`}
+                  className={`motion-pill-button ${filter === option.id ? "is-active" : ""}`}
                 >
                   {option.label}
                 </button>
@@ -776,7 +774,7 @@ export default function ExplorePage() {
           </div>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-[2.1fr_1fr]">
-            <section className="rounded-2xl border border-[var(--line)] bg-white p-4">
+            <section className="motion-soft-card rounded-2xl p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
@@ -804,7 +802,7 @@ export default function ExplorePage() {
             </section>
 
             <div className="space-y-4">
-              <section className="rounded-2xl border border-[var(--line)] bg-white p-4">
+              <section className="motion-soft-card rounded-2xl p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
@@ -856,7 +854,7 @@ export default function ExplorePage() {
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-[var(--line)] bg-white p-4">
+              <section className="motion-soft-card rounded-2xl p-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
                     Categories
@@ -937,7 +935,7 @@ export default function ExplorePage() {
           </div>
 
           <div className="mt-6 grid gap-4 xl:grid-cols-[1.3fr_1fr]">
-            <section className="rounded-2xl border border-[var(--line)] bg-white p-4">
+            <section className="motion-soft-card rounded-2xl p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
@@ -991,7 +989,7 @@ export default function ExplorePage() {
             </section>
 
             <div className="space-y-4">
-              <section className="rounded-2xl border border-[var(--line)] bg-white p-4">
+              <section className="motion-soft-card rounded-2xl p-4">
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
                   Trending hashtags
                 </p>
@@ -1015,7 +1013,7 @@ export default function ExplorePage() {
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-[var(--line)] bg-white p-4">
+              <section className="motion-soft-card rounded-2xl p-4">
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
                   Creator spotlights
                 </p>

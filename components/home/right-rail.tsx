@@ -201,13 +201,13 @@ function NotificationCard({
             {notification.title}
           </span>
           {notification.groupCount && notification.groupCount > 1 ? (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+            <span className="rounded-full bg-[color-mix(in_srgb,var(--brand-soft)_56%,var(--plain-bg)_44%)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted-ink)]">
               {notification.groupCount}
             </span>
           ) : null}
           <NotificationMarker marker={notification.marker} />
         </div>
-        <p className="mt-0.5 break-words text-xs text-slate-500">{notification.detail}</p>
+        <p className="mt-0.5 break-words text-xs text-[var(--muted-ink)]">{notification.detail}</p>
         {!dimmed && collabAction ? (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button
@@ -220,14 +220,14 @@ function NotificationCard({
             <button
               type="button"
               onClick={() => onRespondToCollabInvite(collabAction.postId, "decline")}
-              className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] font-semibold text-slate-600"
+              className="rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_92%,transparent)] px-3 py-1 text-[11px] font-semibold text-[var(--ink)]"
             >
               Decline
             </button>
           </div>
         ) : null}
       </div>
-      <span className="shrink-0 text-[11px] text-slate-500">{notification.meta}</span>
+      <span className="shrink-0 text-[11px] text-[var(--muted-ink)]">{notification.meta}</span>
     </div>
   );
 
@@ -236,8 +236,8 @@ function NotificationCard({
       <button
         type="button"
         onClick={() => onNotificationAction(notification)}
-        className={`w-full rounded-xl border border-[var(--line)] px-3 py-2 text-left transition hover:border-[var(--brand)] ${
-          dimmed ? "bg-white/80 opacity-60" : "bg-white"
+        className={`motion-soft-card w-full rounded-xl px-3 py-2 text-left transition hover:border-[var(--brand)] ${
+          dimmed ? "opacity-60" : ""
         }`}
       >
         {content}
@@ -247,8 +247,8 @@ function NotificationCard({
 
   return (
     <div
-      className={`w-full rounded-xl border border-[var(--line)] px-3 py-2 text-left ${
-        dimmed ? "bg-white/80 opacity-60" : "bg-white"
+      className={`motion-soft-card w-full rounded-xl px-3 py-2 text-left ${
+        dimmed ? "opacity-60" : ""
       }`}
     >
       {content}
@@ -297,8 +297,8 @@ export default function HomeRightRail({
       <section className="motion-surface p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Theme</p>
-            <p className="text-[11px] text-slate-500">Adjust the look without crowding the header.</p>
+            <p className="text-sm font-semibold text-[var(--ink-strong)]">Theme</p>
+            <p className="text-[11px] text-[var(--muted-ink)]">Adjust the look without crowding the header.</p>
           </div>
           {themePicker}
         </div>
@@ -307,8 +307,8 @@ export default function HomeRightRail({
       <section className="motion-surface p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Live Now</p>
-            <p className="text-[11px] text-slate-500">Join live broadcasts in progress.</p>
+            <p className="text-sm font-semibold text-[var(--ink-strong)]">Live Now</p>
+            <p className="text-[11px] text-[var(--muted-ink)]">Join live broadcasts in progress.</p>
           </div>
           <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
             {liveSessions.length}
@@ -319,7 +319,7 @@ export default function HomeRightRail({
             liveSessions.map((session) => (
               <div
                 key={session.id}
-                className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white px-3 py-2"
+                className="motion-soft-card flex items-center gap-3 rounded-xl px-3 py-2"
               >
                 <UserAvatar
                   name={session.host.name}
@@ -332,13 +332,13 @@ export default function HomeRightRail({
                   <span className="avatar-live-badge">LIVE</span>
                 </UserAvatar>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-900">{session.host.name}</p>
-                  <p className="truncate text-[11px] text-slate-500">{session.viewerCount} watching</p>
+                  <p className="truncate text-sm font-semibold text-[var(--ink-strong)]">{session.host.name}</p>
+                  <p className="truncate text-[11px] text-[var(--muted-ink)]">{session.viewerCount} watching</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => onOpenLive(session.id)}
-                  className="ml-auto rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-[var(--brand)]"
+                  className="ml-auto rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_92%,transparent)] px-3 py-1 text-[11px] font-semibold text-[var(--ink)] transition hover:border-[var(--brand)]"
                 >
                   {session.isHost ? "Resume" : "Join"}
                 </button>
@@ -351,17 +351,17 @@ export default function HomeRightRail({
       </section>
 
       <section className="motion-surface overflow-hidden p-4">
-        <div className="rounded-[24px] border border-[var(--line)] bg-[radial-gradient(circle_at_top,#dfeeff,transparent_58%),linear-gradient(180deg,#ffffff,#f5f8ff)] p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+        <div className="rounded-[24px] border border-[var(--line)] bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--brand-soft)_42%,transparent),transparent_58%),linear-gradient(180deg,color-mix(in_srgb,var(--plain-bg-elevated)_96%,transparent),color-mix(in_srgb,var(--plain-bg)_96%,transparent))] p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted-ink)]">
             Random Chat
           </p>
           <h3
-            className="mt-2 text-lg font-semibold text-slate-900"
+            className="mt-2 text-lg font-semibold text-[var(--ink-strong)]"
             style={{ fontFamily: "var(--font-heading)" }}
           >
             Meet new people with interest and country filters.
           </h3>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
+          <p className="mt-2 text-xs leading-5 text-[var(--muted-ink)]">
             Motion pairs signed-in members in a private WebRTC room, with skip and report ready if the vibe is off.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">

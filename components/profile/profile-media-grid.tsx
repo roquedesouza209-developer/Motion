@@ -233,7 +233,7 @@ function MediaTile({
 
   return (
     <article
-      className={`group relative aspect-square overflow-hidden rounded-2xl border border-[var(--line)] bg-white ${
+      className={`motion-soft-card group relative aspect-square overflow-hidden rounded-2xl border border-[var(--line)] ${
         draggable ? "profile-tile-draggable" : ""
       } ${isPinned ? "profile-tile-pinned" : ""} ${isDragging ? "profile-tile-dragging" : ""} ${
         isDropTarget ? "profile-tile-drop" : ""
@@ -551,7 +551,7 @@ export default function ProfileMediaGrid({
 }: ProfileMediaGridProps) {
   if (posts.length === 0) {
     return (
-      <div className="mt-5 rounded-2xl border border-[var(--line)] bg-white px-4 py-8 text-center text-sm text-slate-500">
+      <div className="motion-soft-card mt-5 rounded-2xl px-4 py-8 text-center text-sm text-[var(--muted-ink)]">
         {emptyStateLabel(activeTab)}
       </div>
     );

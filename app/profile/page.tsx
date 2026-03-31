@@ -2072,7 +2072,7 @@ function ProfilePageContent() {
         previewGradient={
           user?.avatarGradient ??
           profileOwner?.avatarGradient ??
-          "linear-gradient(135deg, #3f7bff, #2fbde8)"
+          "linear-gradient(135deg, #4b63db, #d77656)"
         }
         onClose={() => setEditOpen(false)}
         onChangeFirstName={setEditFirstName}

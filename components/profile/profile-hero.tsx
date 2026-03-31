@@ -61,16 +61,16 @@ function SectionActionButton({
   tone?: "default" | "danger";
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`grid h-9 w-9 place-items-center rounded-full border transition ${
-        tone === "danger"
-          ? "border-rose-200 bg-white text-rose-500 hover:border-rose-400 hover:text-rose-600"
-          : "border-[var(--line)] bg-white text-slate-500 hover:border-[var(--brand)] hover:text-[var(--brand)]"
-      }`}
-      aria-label={title}
-      title={title}
+      <button
+        type="button"
+        onClick={onClick}
+        className={`grid h-9 w-9 place-items-center rounded-full border transition ${
+          tone === "danger"
+            ? "border-rose-200 bg-[color-mix(in_srgb,var(--plain-bg-elevated)_92%,transparent)] text-rose-500 hover:border-rose-400 hover:text-rose-600"
+            : "border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_92%,transparent)] text-[var(--muted-ink)] hover:border-[var(--brand)] hover:text-[var(--brand)]"
+        }`}
+        aria-label={title}
+        title={title}
     >
       {children}
     </button>
@@ -114,7 +114,7 @@ export default function ProfileHero({
             style={{ backgroundImage: `url(${owner.coverImageUrl})` }}
           />
         ) : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(6,14,26,0.78)] via-[rgba(10,19,36,0.28)] to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(18,12,9,0.72)] via-[rgba(34,24,19,0.2)] to-transparent" />
         <div className="absolute left-5 top-5 flex flex-wrap gap-2">
           <span className="rounded-full border border-white/20 bg-black/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/92 backdrop-blur-sm">
             @{owner.handle}
@@ -149,7 +149,7 @@ export default function ProfileHero({
             <div className="pb-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1
-                  className="text-2xl font-semibold text-slate-900 sm:text-3xl"
+                  className="text-2xl font-semibold text-[var(--ink-strong)] sm:text-3xl"
                   style={{ fontFamily: "var(--font-heading)" }}
                 >
                   {owner.name}
@@ -198,7 +198,7 @@ export default function ProfileHero({
                     disabled={followLoading}
                     className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                       isFollowing
-                        ? "border border-[var(--line)] bg-white text-slate-700 hover:border-[var(--brand)]"
+                        ? "border border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_92%,transparent)] text-[var(--ink)] hover:border-[var(--brand)]"
                         : "text-white"
                     } ${followLoading ? "opacity-70" : ""}`}
                     style={
@@ -225,41 +225,41 @@ export default function ProfileHero({
                   </Link>
                 )}
               </div>
-              <p className="mt-1 text-sm text-slate-500">@{owner.handle}</p>
+              <p className="mt-1 text-sm text-[var(--muted-ink)]">@{owner.handle}</p>
               {isViewingSelf ? (
-                <p className="mt-1 text-xs text-slate-500">{viewerEmail ?? ""}</p>
+                <p className="mt-1 text-xs text-[var(--muted-ink)]">{viewerEmail ?? ""}</p>
               ) : null}
-              {owner.bio ? <p className="mt-3 max-w-2xl text-sm text-slate-700">{owner.bio}</p> : null}
+              {owner.bio ? <p className="mt-3 max-w-2xl text-sm text-[var(--ink)]">{owner.bio}</p> : null}
             </div>
           </div>
 
           <div
             className={`grid gap-2 ${isViewingSelf ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}
           >
-            <div className="rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-center">
-              <p className="text-lg font-semibold text-slate-900">{postCount}</p>
-              <p className="text-xs text-slate-500">Posts</p>
+            <div className="motion-stat-card px-4 py-3 text-center">
+              <p className="text-lg font-semibold text-[var(--ink-strong)]">{postCount}</p>
+              <p className="text-xs text-[var(--muted-ink)]">Posts</p>
             </div>
             <button
               type="button"
               onClick={onOpenFollowers}
-              className="rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-center transition hover:border-[var(--brand)]"
+              className="motion-stat-card px-4 py-3 text-center transition hover:border-[var(--brand)]"
             >
-              <p className="text-lg font-semibold text-slate-900">{followerCount}</p>
-              <p className="text-xs text-slate-500">Followers</p>
+              <p className="text-lg font-semibold text-[var(--ink-strong)]">{followerCount}</p>
+              <p className="text-xs text-[var(--muted-ink)]">Followers</p>
             </button>
             <button
               type="button"
               onClick={onOpenFollowing}
-              className="rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-center transition hover:border-[var(--brand)]"
+              className="motion-stat-card px-4 py-3 text-center transition hover:border-[var(--brand)]"
             >
-              <p className="text-lg font-semibold text-slate-900">{followingCount}</p>
-              <p className="text-xs text-slate-500">Following</p>
+              <p className="text-lg font-semibold text-[var(--ink-strong)]">{followingCount}</p>
+              <p className="text-xs text-[var(--muted-ink)]">Following</p>
             </button>
             {isViewingSelf ? (
-              <div className="rounded-2xl border border-[var(--line)] bg-white px-4 py-3 text-center">
-                <p className="text-lg font-semibold text-slate-900">{savedCount}</p>
-                <p className="text-xs text-slate-500">Vault</p>
+              <div className="motion-stat-card px-4 py-3 text-center">
+                <p className="text-lg font-semibold text-[var(--ink-strong)]">{savedCount}</p>
+                <p className="text-xs text-[var(--muted-ink)]">Vault</p>
               </div>
             ) : null}
           </div>
@@ -268,15 +268,13 @@ export default function ProfileHero({
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           {isViewingSelf ? (
             <>
-              <div className="inline-flex rounded-full border border-[var(--line)] bg-white p-1">
+              <div className="motion-pill-bar">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => onSelectTab(tab.id)}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                      activeTab === tab.id ? "text-white" : "text-slate-600"
-                    }`}
+                    className={`motion-pill-button ${activeTab === tab.id ? "is-active" : ""}`}
                     style={
                       activeTab === tab.id
                         ? {
@@ -299,7 +297,7 @@ export default function ProfileHero({
                     className={`flex h-10 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${
                       layoutEditMode
                         ? "text-white"
-                        : "border-[var(--line)] bg-white text-slate-700 hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                        : "border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_92%,transparent)] text-[var(--ink)] hover:border-[var(--brand)] hover:text-[var(--brand)]"
                     }`}
                     style={
                       layoutEditMode
@@ -361,9 +359,9 @@ export default function ProfileHero({
                 <button
                   type="button"
                   onClick={onOpenSettings}
-                  className="flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--line)] bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                  aria-label="Settings"
-                >
+                     className="flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--line)] bg-[color-mix(in_srgb,var(--plain-bg-elevated)_92%,transparent)] px-4 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                     aria-label="Settings"
+                   >
                   <svg
                     viewBox="0 0 24 24"
                     className="h-4 w-4"
@@ -381,7 +379,7 @@ export default function ProfileHero({
               </div>
             </>
           ) : (
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Posts</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-[var(--muted-ink)]">Posts</p>
           )}
         </div>
       </div>
